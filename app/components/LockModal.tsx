@@ -12,7 +12,6 @@ import {
 import { showSuccess } from './notifications';
 
 const LockModal = (props: any) => {
-  console.log('Props', props);
   const { fieldData, currentUserData, entryData, contextData } = props;
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
   return (
