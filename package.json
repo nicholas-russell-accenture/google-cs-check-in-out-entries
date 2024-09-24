@@ -1,0 +1,37 @@
+{
+  "name": "check-in-out-entries",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@contentstack/app-sdk": "^2.0.3",
+    "@contentstack/venus-components": "^2.2.4",
+    "@types/crypto-js": "^4.2.2",
+    "crypto-js": "^4.2.0",
+    "immutable": "^4.3.7",
+    "lodash": "^4.17.21",
+    "next": "14.2.13",
+    "next-themes": "^0.3.0",
+    "pkce-challenge": "^4.1.0",
+    "react": "^18",
+    "react-dom": "^18",
+    "usehooks-ts": "^3.1.0"
+  },
+  "devDependencies": {
+    "@types/immutable": "^3.8.7",
+    "@types/lodash": "^4.17.7",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.13",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
+  }
+}
