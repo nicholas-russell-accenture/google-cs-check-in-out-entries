@@ -32,8 +32,6 @@ const CheckInOut = () => {
       if (!ct) return;
       if (!appSdk) return;
       cleanUpEntryPayload(payload);
-      console.log('Content Type', ct);
-      console.log('Payload', payload);
       return appSdk.stack.ContentType(ct).Entry(payload.uid).update({
         entry: payload,
       });
@@ -42,6 +40,7 @@ const CheckInOut = () => {
   );
 
   React.useEffect(() => {
+    console.log(currentUserData);
     if (
       currentUserData.isAdmin ||
       currentUserData?.uid === fieldData?.user?.uid
@@ -72,7 +71,6 @@ const CheckInOut = () => {
                   status,
                 };
                 appSdk.location.CustomField?.field.setData(d).then(() => {
-                  console.log('Data', d);
                   saveEntry(status, currentUserData).then(() => {
                     cbModal({
                       component: (props: any) => (
