@@ -40,10 +40,10 @@ const CheckInOut = () => {
   );
 
   React.useEffect(() => {
-    console.log(currentUserData);
     if (
       currentUserData.isAdmin ||
-      currentUserData?.uid === fieldData?.user?.uid
+      currentUserData?.uid === fieldData?.user?.uid ||
+      fieldData?.status === 0
     ) {
       setButtonDisabled(false);
       return;

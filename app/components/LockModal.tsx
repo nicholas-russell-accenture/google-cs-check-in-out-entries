@@ -39,8 +39,8 @@ const LockModal = (props: any) => {
                   body: JSON.stringify({
                     entryUid: entryData?.uid,
                     contentTypeUid: entryData?.content_type?.uid,
-                    lockUserUid: currentUserData?.uid,
-                    requestUserUid: fieldData?.user?.uid,
+                    lockUserUid: fieldData?.user?.uid,
+                    requestUserUid: currentUserData?.uid,
                     branch: contextData?.branch,
                     api_key: contextData?.api_key,
                     locale: entryData?.locale,
