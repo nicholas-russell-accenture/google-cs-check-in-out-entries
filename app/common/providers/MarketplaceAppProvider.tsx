@@ -61,7 +61,7 @@ export const MarketplaceAppProvider: React.FC<ProviderProps> = ({
         // set field data
         const customField = appSdk.location.CustomField;
         // set height to 0 to use the minimum height for the custom field
-        customField?.frame.updateHeight(0);
+        customField?.frame.updateHeight(86);
 
         const cd = {
           api_key: customField?.stack.getData().api_key,
