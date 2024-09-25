@@ -7,7 +7,7 @@ import ReloadModal from '@/app/components/ReloadModal';
 import { useAppSdk } from '@/app/hooks/useAppSdk';
 import { useCheckOutData } from '@/app/hooks/useCheckOutData';
 import { cleanUpEntryPayload } from '@/app/utils';
-import { Button, cbModal } from '@contentstack/venus-components';
+import { Button, cbModal, Icon, Info } from '@contentstack/venus-components';
 
 import ShowModal from './ShowModal';
 
@@ -56,39 +56,68 @@ const CheckInOut = () => {
   return (
     <>
       <ShowModal />
-      <div className="flex flex-row justify-center items-center h-screen">
-        <div>
-          <Button
-            buttonType="secondary"
-            isFullWidth
-            disabled={buttonDisabled || dataLoading}
-            onClick={() => {
-              setDataLoading(true);
-              setFieldData((prev: any) => {
-                const status = prev.status === 0 ? 1 : 0;
-                const d = {
-                  user: currentUserData,
-                  status,
-                };
-                appSdk.location.CustomField?.field.setData(d).then(() => {
-                  saveEntry(status, currentUserData).then(() => {
-                    cbModal({
-                      component: (props: any) => (
-                        <ReloadModal {...props} status={status} />
-                      ),
-                    });
-
-                    setDataLoading(false);
-                  });
-                });
-                return d;
-              });
-            }}
-            icon={fieldData?.status === 1 ? 'OpenLock' : 'Lock'}
-          >
-            {fieldData?.status === 1 ? 'Check In' : 'Check Out'}{' '}
-          </Button>
+      {/* {fieldData.status === 1 ? (
+        <div className="flex flex-row justify-center items-center pt-5 pb-10">
+          <Info
+            content={<div>Entry is Locked</div>}
+            icon={<Icon icon="Error" />}
+            type="warning"
+          />
         </div>
+      ) : (
+        <div className="flex flex-row justify-center items-center pt-5 pb-10">
+          <Info
+            content={<div>Entry is Unlocked</div>}
+            icon={<Icon icon="Success" />}
+            type="success"
+          />
+        </div>
+      )} */}
+
+      <div className="flex flex-row justify-center items-center w-full pr-2">
+        <Info
+          icon={<Icon icon={fieldData?.status === 1 ? 'Error' : 'Success'} />}
+          type={fieldData?.status === 1 ? 'warning' : 'success'}
+          className="w-full"
+          content={
+            <>
+              <h3 className="pb-2">
+                ENTRY IS {fieldData?.status === 1 ? 'LOCKED' : 'UNLOCKED'}
+              </h3>
+              <div className="">
+                <Button
+                  buttonType="secondary"
+                  disabled={buttonDisabled || dataLoading}
+                  onClick={() => {
+                    setDataLoading(true);
+                    setFieldData((prev: any) => {
+                      const status = prev.status === 0 ? 1 : 0;
+                      const d = {
+                        user: currentUserData,
+                        status,
+                      };
+                      appSdk.location.CustomField?.field.setData(d).then(() => {
+                        saveEntry(status, currentUserData).then(() => {
+                          cbModal({
+                            component: (props: any) => (
+                              <ReloadModal {...props} status={status} />
+                            ),
+                          });
+
+                          setDataLoading(false);
+                        });
+                      });
+                      return d;
+                    });
+                  }}
+                  icon={fieldData?.status === 1 ? 'OpenLock' : 'Lock'}
+                >
+                  {fieldData?.status === 1 ? 'Unlock Entry' : 'Lock Entry'}
+                </Button>
+              </div>
+            </>
+          }
+        />
       </div>
     </>
   );

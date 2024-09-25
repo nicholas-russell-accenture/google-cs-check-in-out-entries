@@ -26,6 +26,15 @@ const LockModal = (props: any) => {
       <ModalFooter>
         <ButtonGroup>
           <Button
+            buttonType="light"
+            isLoading={isLoading}
+            onClick={() => {
+              document.location.href = `https://app.contentstack.com/#!/stack/${contextData?.api_key}/dashboard?branch=${contextData?.branch}`;
+            }}
+          >
+            Go to Dashboard
+          </Button>
+          <Button
             isLoading={isLoading}
             onClick={() => {
               //TODO: CALL AUTOMATE HTTP TRIGGER
@@ -56,7 +65,7 @@ const LockModal = (props: any) => {
             }}
             icon="Send"
           >
-            Request Check In
+            Request Unlock
           </Button>
         </ButtonGroup>
       </ModalFooter>
