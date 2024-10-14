@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 
 import ReloadModal from '@/app/components/ReloadModal';
 import { useAppSdk } from '@/app/hooks/useAppSdk';
@@ -19,6 +19,14 @@ const CheckInOut = () => {
   const [dataLoading, setDataLoading] = React.useState<boolean>(false);
   const [buttonDisabled, setButtonDisabled] = React.useState<boolean>(true);
   const [currentMetaData, setCurrentMetaData] = React.useState<any>(null);
+
+  // Create a ref to hold the latest currentMetaData
+  const currentMetaDataRef = React.useRef(currentMetaData);
+  
+  // Effect to update the ref when currentMetaData changes
+  React.useEffect(() => {
+    currentMetaDataRef.current = currentMetaData;
+  }, [currentMetaData]);
 
   // const saveEntry = React.useCallback(
   //   async (status: number, userData: any): Promise<void> => {
@@ -44,17 +52,10 @@ const CheckInOut = () => {
   // );
 
 
+  // for check entry is locked or not
   React.useEffect(() => {
     const fetchMetadata = async () => {
       try {
-        // const handleChange = () => {
-
-        //   console.log("changed------------------", appSdk?.location.CustomField?.entry);
-        // };
-
-        const entry = appSdk?.location.CustomField?.entry;
-        // entry?.onChange(handleUpdate);
-        // console.log("------------",appSdk?.location.CustomField?.entry)
         const entityUidToCheck = appSdk?.location.CustomField?.entry._data.uid;
         const resData = await appSdk?.metadata?.retrieveAllMetaData();
         let filteredEntry: any = resData?.metadata.filter((item) => {
@@ -62,9 +63,11 @@ const CheckInOut = () => {
         });
 
         if (filteredEntry?.length != 0) {
-          console.log("filteredEntry----------", filteredEntry)
           setFieldData(() => ({ status: 1 }));
           setCurrentMetaData(filteredEntry[0])
+        } else {
+          setFieldData(() => ({ status: 0 }));
+          setCurrentMetaData(null)
         }
       } catch (error) {
         console.error("Error retrieving metadata:", error);
@@ -72,43 +75,67 @@ const CheckInOut = () => {
     };
 
     fetchMetadata();
-  }, [appSdk, currentUserData]); // Add dependencies as necessary
+  }, [appSdk, currentUserData]);
 
+  // for unlock entry
   const unLockEntry = React.useCallback(
     async (): Promise<void> => {
+      console.log("unlock entry calleddd............................")
       if (!appSdk) return;
-
-      console.log("currentMetaData::::::::::", currentMetaData)
-      if (currentMetaData?.entity_uid === appSdk?.location?.CustomField?.entry?._data?.uid) {
-        appSdk?.metadata?.deleteMetaData({ uid: currentMetaData.uid })
+      // Check if currentMetaData matches the entry being unlocked
+      if (currentMetaDataRef.current?.entity_uid === appSdk?.location?.CustomField?.entry?._data?.uid) {
+        try {
+          await appSdk.metadata.deleteMetaData({ uid: currentMetaDataRef.current.uid });
+          // Update field data to 0 after successfully unlocking
+          setFieldData({ status: 0 });
+        } catch (error) {
+          console.error("Error unlocking entry:", error);
+        }
       }
     },
-    [appSdk, currentMetaData]
-  )
+    [appSdk, setFieldData] // Ensure setFieldData is included in the dependency array
+  );
 
+  // for create metadata 
   const createEntryLock = React.useCallback(
     async (): Promise<void> => {
-
       let entryId: any = appSdk?.location?.CustomField?.entry?._data?.uid
       if (!appSdk) return;
-     let response = await appSdk?.metadata.createMetaData({
-        entity_uid: entryId, // "bltffa9a5309e5e7e1f";
-        type: "entry", // default: "asset"
-        _content_type_uid: "sdp_knowledge_article",
-        //locale?: string;
-        EntryLocked: true,
-        extension_uid: 'bltbce177efe7284a0f',
+      try {
+        let response = await appSdk?.metadata.createMetaData({
+          entity_uid: entryId,
+          type: "entry",
+          _content_type_uid: "sdp_knowledge_article",
+          EntryLocked: true,
+          extension_uid: 'bltbce177efe7284a0f',
+          createdByUserName: currentUserData?.name,
+        })
 
-        createdByUserName: currentUserData?.name,
-      })
-      if (response) {
-        console.log("EntryLocked:", response);
-      } else {
-        console.log("entry creation failed")
+        if (response) {
+          setFieldData(() => ({ status: 1 }));
+          setCurrentMetaData(response.metadata)
+        } else {
+          console.log("entry creation failed")
+        }
+      } catch (error) {
+        console.error("Error creating entry lock:", error);
       }
     },
-    [appSdk,currentUserData,unLockEntry]
+    [appSdk, currentUserData]
   );
+
+  // for handle onChange event
+  React.useEffect(() => {
+    const handleChange = async () => {
+      console.log("currentMetaDataRef:::::::::::", currentMetaDataRef)
+      console.log("fieldData------------", fieldData.status)
+      if (currentMetaDataRef.current === null && fieldData?.status === 0) {
+        await createEntryLock();
+      }
+    }
+    const entry: any = appSdk?.location.CustomField?.entry;
+    entry.onChange(handleChange);
+  }, [appSdk, createEntryLock, fieldData]);
 
   React.useEffect(() => {
     if (
@@ -169,29 +196,18 @@ const CheckInOut = () => {
                         status,
                       };
                       appSdk.location.CustomField?.field.setData(d).then(() => {
-                        fieldData?.status === 0 ?
-                          createEntryLock()
-                          .then(() => {
-                            cbModal({
-                              component: (props: any) => (
-                                <ReloadModal {...props} status={fieldData?.status} currentUserData={currentUserData} />
-                              ),
-                            });
-                            setDataLoading(false);
-                          })
-                          :
-                          currentMetaData.created_by === currentUserData.uid ? unLockEntry().then(() => {
-                            cbModal({
-                              component: (props: any) => (
-                                <ReloadModal {...props} status={fieldData?.status} currentUserData={currentUserData} />
-                              ),
-                            });
-                            setDataLoading(false);
-                          }) : cbModal({
-                            component: () => (
-                              <RequestUnlockModal currentMetaData={currentMetaData} />
+                        currentMetaData.created_by === currentUserData.uid ? unLockEntry().then(() => {
+                          cbModal({
+                            component: (props: any) => (
+                              <ReloadModal {...props} status={fieldData?.status} currentUserData={currentUserData} />
                             ),
                           });
+                          setDataLoading(false);
+                        }) : cbModal({
+                          component: () => (
+                            <RequestUnlockModal currentMetaData={currentMetaData} />
+                          ),
+                        });
 
                       });
                       return d;
