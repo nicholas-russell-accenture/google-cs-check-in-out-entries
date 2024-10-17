@@ -22,7 +22,7 @@ const ReloadModal = (props: any) => {
         )}
         {status === 0 && (
           <div className="dummy-body">
-            The entry has been checked in. Please reload your browser for the
+            The entry has been unlocked. Please reload your browser for the
             change to take effect.
           </div>
         )}

@@ -10,6 +10,7 @@ import { Button, cbModal, Icon, Info } from "@contentstack/venus-components";
 import RequestUnlockModal from "@/app/components/RequestUnlockModal";
 
 import ShowModal from "./ShowModal";
+import UnlockEntryModal from "@/app/components/UnlockEntryModal";
 
 const CheckInOut = () => {
   const appSdk = useAppSdk();
@@ -59,7 +60,6 @@ const CheckInOut = () => {
   // Unlocks the entry
   const unLockEntry = React.useCallback(
     async (): Promise<void> => {
-      // console.log("Unlock entry called.");
       if (!appSdk) return; // Exit if appSdk is not available.
 
       // Check if currentMetaData matches the entry being unlocked
@@ -74,7 +74,8 @@ const CheckInOut = () => {
 
           // Set CurrentMetaData and currentMetaDataRef.current to null after unlocking
           setCurrentMetaData(null);
-
+          setDataLoading(false);          
+          return fieldData.status
         } catch (error) {
           console.error("Error unlocking entry:", error);
         }
@@ -114,7 +115,7 @@ const CheckInOut = () => {
     }
   }, [appSdk, currentUserData]);
 
-  // Create entry lock meta-data
+  // update entry lock meta-data
   const updateEntryLock = React.useCallback(async (): Promise<void> => {
     let entryId: any = appSdk?.location?.CustomField?.entry?._data?.uid;
 
@@ -196,6 +197,19 @@ const CheckInOut = () => {
     }
   }, [currentUserData.isAdmin, currentUserData?.uid, fieldData?.user?.uid]);
 
+  // show modal for unlock entry
+  const showUnlockModal = () => {
+    cbModal({
+      component: ({ closeModal }: { closeModal: () => void }) => ( 
+        <UnlockEntryModal 
+          currentMetaData={currentMetaData} 
+          unlockAction={unLockEntry} 
+          closeModal={closeModal}
+        />
+      ),
+    });
+  };
+
   // Do not render output if appSdk is not available.
   if (!appSdk) return null;
 
@@ -211,7 +225,7 @@ const CheckInOut = () => {
       <ShowModal />
       <div className="flex flex-row justify-center items-center w-full pr-2">
         <Info
-          icon={<Icon icon={fieldData?.status === 1 ? "Error" : "Success"} />}
+          icon={<Icon icon={entryIsLocked? "Error" : "Success"} />}
           type={entryIsLocked ? "warning" : "success"}
           className="w-full"
           content={
@@ -224,11 +238,8 @@ const CheckInOut = () => {
                   disabled={buttonDisabled || dataLoading}
                   onClick={() => {
                     setDataLoading(true);
-
                     entryIsLocked
-                      ? unLockEntry().then(() => {
-                          setDataLoading(false);
-                        })
+                      ? showUnlockModal()
                       : createEntryLock().then(() => {
                           setDataLoading(false);
                         });
