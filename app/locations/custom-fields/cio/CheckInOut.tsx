@@ -44,8 +44,16 @@ const CheckInOut = () => {
         });
 
         if (filteredEntry?.length != 0) {
-          // console.log("Found metadata:", filteredEntry[0]);
           setCurrentMetaData(filteredEntry[0]);
+          setTimeout(() => {
+            if (filteredEntry[0].created_by !== currentUserData.uid) {
+              cbModal({
+                component: (props: any) => (
+                  <RequestUnlockModal currentMetaData={filteredEntry[0]} />
+                ),
+              });
+            }
+          }, 0);
         } else {
           setCurrentMetaData(null);
         }
