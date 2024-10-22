@@ -3,7 +3,6 @@
 
 import React from "react";
 
-import ReloadModal from "@/app/components/ReloadModal";
 import { useAppSdk } from "@/app/hooks/useAppSdk";
 import { useCheckOutData } from "@/app/hooks/useCheckOutData";
 import { Button, cbModal, Icon, Info } from "@contentstack/venus-components";
@@ -33,8 +32,8 @@ const CheckInOut = () => {
       try {
         const entityUidToCheck = appSdk?.location.CustomField?.entry._data.uid;
         const resData = await appSdk?.metadata?.retrieveAllMetaData();
-        // console.log("All metadata in Stack:", resData);
-        let filteredEntry: any = resData?.metadata.filter((item) => {
+        // console.log("All metadata in Stack:", resData);  
+        const filteredEntry: any = resData?.metadata.filter((item) => {
           return (
             item.entity_uid === entityUidToCheck &&
             item.EntryLocked &&
@@ -47,7 +46,7 @@ const CheckInOut = () => {
           setTimeout(() => {
             if (filteredEntry[0].created_by !== currentUserData.uid) {
               cbModal({
-                component: (props: any) => (
+                component: () => (
                   <RequestUnlockModal currentMetaData={filteredEntry[0]} />
                 ),
               });
@@ -93,7 +92,7 @@ const CheckInOut = () => {
 
   // Create entry lock meta-data
   const createEntryLock = React.useCallback(async (): Promise<void> => {
-    let entryId: any = appSdk?.location?.CustomField?.entry?._data?.uid;
+    const entryId: any = appSdk?.location?.CustomField?.entry?._data?.uid;
 
     if (!appSdk) return; // App SDK is not available.
 
@@ -102,7 +101,7 @@ const CheckInOut = () => {
     const currentTime = currentDate.toLocaleTimeString();
 
     try {
-      let response = await appSdk?.metadata.createMetaData({
+      const response = await appSdk?.metadata.createMetaData({
         entity_uid: entryId,
         type: "entry",
         _content_type_uid: "sdp_knowledge_article",
@@ -124,8 +123,6 @@ const CheckInOut = () => {
 
   // Create entry lock meta-data
   const updateEntryLock = React.useCallback(async (): Promise<void> => {
-    let entryId: any = appSdk?.location?.CustomField?.entry?._data?.uid;
-
     if (!appSdk) return; // App SDK is not available.
 
     // Get the browser's current time.
@@ -134,7 +131,7 @@ const CheckInOut = () => {
 
     // Update the existing entry lock metadata to include the latest timestamp.
     try {
-      let response = await appSdk?.metadata.updateMetaData({
+      const response = await appSdk?.metadata.updateMetaData({
         uid: currentMetaDataRef.current.uid,
         currentUserTime: currentTime,
       });
