@@ -94,7 +94,7 @@ const CheckInOut = () => {
   // Create entry lock meta-data
   const createEntryLock = React.useCallback(async (): Promise<void> => {
     const entryId: any = appSdk?.location?.CustomField?.entry?._data?.uid;
-
+    console.log("entryId::::::::::::",entryId)
     if (!appSdk) return; // App SDK is not available.
 
     // Get the browser's current time.
@@ -105,7 +105,7 @@ const CheckInOut = () => {
       const response = await appSdk?.metadata.createMetaData({
         entity_uid: entryId,
         type: "entry",
-        _content_type_uid: "sdp_knowledge_article",
+        _content_type_uid: "knowledge_article_integration_testing_",
         EntryLocked: true,
         extension_uid: "bltbce177efe7284a0f",
         createdByUserName: currentUserData?.name,
