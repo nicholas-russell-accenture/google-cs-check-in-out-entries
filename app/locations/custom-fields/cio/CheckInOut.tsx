@@ -94,7 +94,6 @@ const CheckInOut = () => {
   // Create entry lock meta-data
   const createEntryLock = React.useCallback(async (): Promise<void> => {
     const entryId: any = appSdk?.location?.CustomField?.entry?._data?.uid;
-    console.log("entryId::::::::::::",entryId)
     if (!appSdk) return; // App SDK is not available.
 
     // Get the browser's current time.
