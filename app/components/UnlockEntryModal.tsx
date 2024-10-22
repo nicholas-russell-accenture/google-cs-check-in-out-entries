@@ -25,9 +25,7 @@ const UnlockEntryModal: React.FC<UnlockEntryModalProps> = (props) => {
 
     // Check the returned status and open ReloadModal if status is 0
     if (status !== undefined && status === 0) {
-      cbModal({
-        component: () => <ReloadModal status={status} />,
-      });
+      closeModal(); // Close the modal after invoking unlockAction
     }
   };
 
