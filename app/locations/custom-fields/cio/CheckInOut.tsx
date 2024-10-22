@@ -17,7 +17,7 @@ const CheckInOut = () => {
   const [dataLoading, setDataLoading] = React.useState<boolean>(false);
   const [buttonDisabled, setButtonDisabled] = React.useState<boolean>(true);
   const [currentMetaData, setCurrentMetaData] = React.useState<any>(null);
-
+  const [isModalOpen, setIsModalOpen] = React.useState(false)
   // Create a ref to hold the latest currentMetaData
   const currentMetaDataRef = React.useRef(currentMetaData);
 
@@ -94,6 +94,8 @@ const CheckInOut = () => {
   // Create entry lock meta-data
   const createEntryLock = React.useCallback(async (): Promise<void> => {
     const entryId: any = appSdk?.location?.CustomField?.entry?._data?.uid;
+    const contentTypeUid: any = appSdk?.location?.CustomField?.entry?.content_type?.uid;
+
     if (!appSdk) return; // App SDK is not available.
 
     // Get the browser's current time.
@@ -104,7 +106,7 @@ const CheckInOut = () => {
       const response = await appSdk?.metadata.createMetaData({
         entity_uid: entryId,
         type: "entry",
-        _content_type_uid: "knowledge_article_integration_testing_",
+        _content_type_uid: contentTypeUid,
         EntryLocked: true,
         extension_uid: "bltbce177efe7284a0f",
         createdByUserName: currentUserData?.name,
@@ -195,19 +197,25 @@ const CheckInOut = () => {
       fieldData?.status === 0
     ) {
       setButtonDisabled(false);
+      setDataLoading(false)
       return;
     } else {
+      setDataLoading(true)
       setButtonDisabled(true);
     }
-  }, [currentUserData.isAdmin, currentUserData?.uid, fieldData?.user?.uid]);
+  }, [currentUserData.isAdmin, currentUserData?.uid, fieldData?.user?.uid,isModalOpen]);
 
   const showUnlockModal = () => {
+    setIsModalOpen(true);
     cbModal({
       component: ({ closeModal }: { closeModal: () => void }) => ( 
         <UnlockEntryModal 
           currentMetaData={currentMetaData} 
           unlockAction={unLockEntry} 
-          closeModal={closeModal}
+          closeModal={() => {
+            closeModal();
+            setIsModalOpen(false); // Close the modal and update state
+          }}
         />
       ),
     });
