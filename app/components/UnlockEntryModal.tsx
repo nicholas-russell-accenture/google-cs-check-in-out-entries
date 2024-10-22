@@ -4,10 +4,8 @@ import {
   Button,
   ModalBody,
   ModalFooter,
-  ModalHeader,
-  cbModal,
+  ModalHeader
 } from "@contentstack/venus-components";
-import ReloadModal from "./ReloadModal";
 
 // Define an interface for the props
 interface UnlockEntryModalProps {
