@@ -202,7 +202,6 @@ const CheckInOut = () => {
     }
   }, [currentUserData.isAdmin, currentUserData?.uid, fieldData?.user?.uid]);
 
-  // show modal for unlock entry
   const showUnlockModal = () => {
     cbModal({
       component: ({ closeModal }: { closeModal: () => void }) => ( 
@@ -243,11 +242,13 @@ const CheckInOut = () => {
                   disabled={buttonDisabled || dataLoading}
                   onClick={() => {
                     setDataLoading(true);
-                    entryIsLocked
-                      ? showUnlockModal()
-                      : createEntryLock().then(() => {
-                          setDataLoading(false);
-                        });
+                    if (entryIsLocked) {
+                      showUnlockModal();
+                    } else {
+                      createEntryLock().then(() => {
+                        setDataLoading(false);
+                      });
+                    }
                   }}
                   icon={entryIsLocked ? "OpenLock" : "Lock"}
                 >
