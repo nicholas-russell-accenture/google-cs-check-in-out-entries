@@ -16,7 +16,7 @@ const RequestUnlockModal = (props: any) => {
             <ModalHeader title="Entry Locked" />
             <ModalBody className="modalBodyCustomClass">
                 <div className="dummy-body">
-                    <p> This Entry was locked on <b>{moment(currentMetaData.updated_at).format('MMM D, YYYY, h:mm A')}</b> by: <b> {currentMetaData.createdByUserName} </b> - Refresh to check lock status </p>
+                    <p> This Entry was locked on <b>{moment(currentMetaData.updated_at).format('MMM D, YYYY [at] h:mm A')}</b> by: <b> {currentMetaData.createdByUserName} </b> - Refresh to check lock status </p>
                 </div>
             </ModalBody>
             <ModalFooter>
