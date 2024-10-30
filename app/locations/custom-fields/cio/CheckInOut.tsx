@@ -19,6 +19,8 @@ const CheckInOut = () => {
   const [currentMetaData, setCurrentMetaData] = React.useState<any>(null);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [isEntryChanged, setIsEntryChanged] = React.useState(false);
+
+  const [isReady, setIsReady] = React.useState(false);
   // Create a ref to hold the latest currentMetaData
   const currentMetaDataRef = React.useRef(currentMetaData);
 
@@ -227,6 +229,34 @@ const CheckInOut = () => {
       ),
     });
   };
+
+  const handleSaveEntry = React.useCallback(
+    async (): Promise<void> => {
+      try {
+        const entry = appSdk?.location?.CustomField?.entry;
+        if (!entry) return;
+
+        entry.onSave(() => {
+          unLockEntry();
+        });
+      } catch (error) {
+        console.error("Error saving entry:", error);
+      }
+    },
+    [appSdk]
+  );
+
+  React.useEffect(() => {
+    if (appSdk) {
+      setIsReady(true);
+    }
+  }, [appSdk]);
+
+  React.useEffect(() => {
+    if (isReady) {
+      handleSaveEntry();
+    }
+  }, [isReady, handleSaveEntry]);
 
   // Do not render output if appSdk is not available.
   if (!appSdk) return null;

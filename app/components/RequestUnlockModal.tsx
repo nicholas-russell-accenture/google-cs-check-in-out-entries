@@ -9,8 +9,10 @@ import {
     ModalHeader
 } from '@contentstack/venus-components';
 
+import { useCheckOutData } from "@/app/hooks/useCheckOutData";
 const RequestUnlockModal = (props: any) => {
     const { currentMetaData } = props;
+    const { contextData } = useCheckOutData();
     return (
         <>
             <ModalHeader title="Entry Locked" />
@@ -23,7 +25,9 @@ const RequestUnlockModal = (props: any) => {
                 <ButtonGroup>
                     <Button buttonType="primary">Request to unlock</Button>
                     <Button buttonType="primary">View Live Preview</Button>
-                    <Button buttonType="primary">Back to Dashboard</Button>
+                    <Button buttonType="primary" onClick={() => {
+                        document.location.href = `https://app.contentstack.com/#!/stack/${contextData?.api_key}/dashboard?branch=${contextData?.branch}`; 
+                    }}>Back to Dashboard</Button>
                 </ButtonGroup>
             </ModalFooter>
         </>
