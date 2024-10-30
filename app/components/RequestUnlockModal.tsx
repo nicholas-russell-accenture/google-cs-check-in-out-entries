@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-expressions */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
 import moment from 'moment';
@@ -11,8 +12,15 @@ import {
 
 import { useCheckOutData } from "@/app/hooks/useCheckOutData";
 const RequestUnlockModal = (props: any) => {
-    const { currentMetaData } = props;
+    const { currentMetaData, appSdk } = props;
     const { contextData } = useCheckOutData();
+    const GchatModel = async () => {
+        const userId = currentMetaData.updated_by;
+        const userEmail =appSdk.stack.getData().collaborators?.find((collaborator: any) => collaborator.uid === userId)?.email
+        console.log("userEmail :::::::::::: ",userEmail);
+        return window.open(`https://mail.google.com/chat/u/0/#chat/welcome?email=${encodeURIComponent(userEmail)}`, '_blank');
+      };
+
     return (
         <>
             <ModalHeader title="Entry Locked" />
@@ -23,7 +31,7 @@ const RequestUnlockModal = (props: any) => {
             </ModalBody>
             <ModalFooter>
                 <ButtonGroup>
-                    <Button buttonType="primary">Request to unlock</Button>
+                    <Button buttonType="primary" onClick={GchatModel}>Request to unlock</Button>
                     <Button buttonType="primary">View Live Preview</Button>
                     <Button buttonType="primary" onClick={() => {
                         document.location.href = `https://app.contentstack.com/#!/stack/${contextData?.api_key}/dashboard?branch=${contextData?.branch}`; 
