@@ -18,6 +18,7 @@ const CheckInOut = () => {
   const [buttonDisabled, setButtonDisabled] = React.useState<boolean>(true);
   const [currentMetaData, setCurrentMetaData] = React.useState<any>(null);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [isEntryChanged, setIsEntryChanged] = React.useState(false);
 
   const [isReady, setIsReady] = React.useState(false);
   // Create a ref to hold the latest currentMetaData
@@ -25,7 +26,6 @@ const CheckInOut = () => {
 
   // Effect to update the ref when currentMetaData changes
   React.useEffect(() => {
-    // console.log("Update Current Metadata:", currentMetaData);
     currentMetaDataRef.current = currentMetaData;
   }, [currentMetaData]);
 
@@ -35,7 +35,6 @@ const CheckInOut = () => {
       try {
         const entityUidToCheck = appSdk?.location.CustomField?.entry._data.uid;
         const resData = await appSdk?.metadata?.retrieveAllMetaData();
-        // console.log("All metadata in Stack:", resData);  
         const filteredEntry: any = resData?.metadata.filter((item) => {
           return (
             item.entity_uid === entityUidToCheck &&
@@ -142,6 +141,7 @@ const CheckInOut = () => {
 
       if (response) {
         setCurrentMetaData(response.metadata);
+        setIsEntryChanged(false);
       } else {
         console.log("Entry lock meta-data entry creation failed.");
       }
@@ -151,19 +151,20 @@ const CheckInOut = () => {
   }, [appSdk, currentUserData]);
 
   const handleChange = async (whatChanged: any) => {
-    // A function that compares the properties on whatChanged with the matching properties on appSdk?.location?.CustomField?.entry?._data to determined what changed, if anything:
+    // Create a new lock if entry is unlocked.
+    if (currentMetaDataRef.current === null && fieldData?.status === 0) {
+      await createEntryLock();
+    }
+
+    // function for check is entry is changed or not
     const entryHasChanged = (whatChanged: any): boolean => {
       // Iterate over each available property on whatChanged and compare with the original value on the entry:
       for (const key in whatChanged) {
-        // console.log("Validate", typeof whatChanged[key], key, whatChanged[key], appSdk?.location?.CustomField?.entry?._data[key]);
         if (whatChanged[key] instanceof Object) {
           if (JSON.stringify(whatChanged[key]) !== JSON.stringify(appSdk?.location?.CustomField?.entry?._data[key])) {
-            // console.log("Object Change:", key, whatChanged[key], appSdk?.location?.CustomField?.entry?._data[key]);
             return true;
           }
         } else if (whatChanged[key] !== appSdk?.location?.CustomField?.entry?._data[key]) {
-          // Field with single value (i.e., a string) has changed.
-          // console.log("String Change:", key, whatChanged[key], appSdk?.location?.CustomField?.entry?._data[key]);
           return true;
         }
       }
@@ -172,19 +173,25 @@ const CheckInOut = () => {
       return false;
     };
 
-    if (entryHasChanged(whatChanged)) {
-      // Update existing lock with new timestamp if entry is locked.
-      if (currentMetaDataRef?.current?.uid) {
-        console.log("Update metadata for lock with last update time.");
-        await updateEntryLock();
-      }
-
-      // Create a new lock if entry is unlocked.
-      if (currentMetaDataRef.current === null && fieldData?.status === 0) {
-        await createEntryLock();
-      }
+    if(entryHasChanged(whatChanged)) {
+      setIsEntryChanged(true)
     }
   };
+
+  // set interval for 1 min
+  React.useEffect(() => {
+    const intervalId = setInterval(async () => {
+      // Execute the desired action here
+      if (isEntryChanged) {
+        // Update existing lock with new timestamp if entry is locked.
+        if (currentMetaDataRef?.current?.uid) {
+          console.log("Update metadata for lock with last update time.");
+          await updateEntryLock();
+        }
+      }
+    }, 60000);
+    return () => clearInterval(intervalId);
+  }, [appSdk,isEntryChanged]);
 
   // Handle onChange event
   React.useEffect(() => {
