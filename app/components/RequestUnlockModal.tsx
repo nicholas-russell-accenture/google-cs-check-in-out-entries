@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-expressions */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
 import moment from 'moment';
@@ -17,7 +16,6 @@ const RequestUnlockModal = (props: any) => {
     const GchatModel = async () => {
         const userId = currentMetaData.updated_by;
         const userEmail =appSdk.stack.getData().collaborators?.find((collaborator: any) => collaborator.uid === userId)?.email
-        console.log("userEmail :::::::::::: ",userEmail);
         return window.open(`https://mail.google.com/chat/u/0/#chat/welcome?email=${encodeURIComponent(userEmail)}`, '_blank');
       };
 
