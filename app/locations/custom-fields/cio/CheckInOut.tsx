@@ -49,7 +49,7 @@ const CheckInOut = () => {
             if (filteredEntry[0].created_by !== currentUserData.uid) {
               cbModal({
                 component: () => (
-                  <RequestUnlockModal currentMetaData={filteredEntry[0]} />
+                  <RequestUnlockModal currentMetaData={filteredEntry[0]} appSdk={appSdk}/>
                 ),
               });
             }
