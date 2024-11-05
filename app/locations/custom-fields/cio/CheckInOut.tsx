@@ -2,6 +2,7 @@
 "use client";
 
 import React from "react";
+import moment from 'moment';
 import { useAppSdk } from "@/app/hooks/useAppSdk";
 import { useCheckOutData } from "@/app/hooks/useCheckOutData";
 import { Button, cbModal, Icon, Info } from "@contentstack/venus-components";
@@ -265,7 +266,7 @@ const CheckInOut = () => {
   if (currentMetaData !== null) {
     entryLockMessage = "Entry is locked.";
     if(currentMetaData.updated_by === currentUserData.uid){
-      entryLockMessage = "Entry locked. Save Changes before unlocking or going inactive to prevent data loss.";
+      entryLockMessage = "Entry locked. Save changes before unlocking or going inactive to prevent data loss.";
     }
     entryIsLocked = true;
   }
