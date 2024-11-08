@@ -30,7 +30,6 @@ const RequestUnlockModal = (props: any) => {
             <ModalFooter>
                 <ButtonGroup>
                     <Button buttonType="primary" onClick={GchatModel}>Request to unlock</Button>
-                    <Button buttonType="primary">View Live Preview</Button>
                     <Button buttonType="primary" onClick={() => {
                         document.location.href = `https://app.contentstack.com/#!/stack/${contextData?.api_key}/dashboard?branch=${contextData?.branch}`; 
                     }}>Back to Dashboard</Button>
