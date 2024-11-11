@@ -10,6 +10,7 @@ import RequestUnlockModal from "@/app/components/RequestUnlockModal";
 
 import ShowModal from "./ShowModal";
 import UnlockEntryModal from "@/app/components/UnlockEntryModal";
+import LockExpiredModal from "@/app/components/LockExpiredModal";
 
 const CheckInOut = () => {
   const appSdk = useAppSdk();
@@ -17,9 +18,10 @@ const CheckInOut = () => {
   const [dataLoading, setDataLoading] = React.useState<boolean>(false);
   const [buttonDisabled, setButtonDisabled] = React.useState<boolean>(true);
   const [currentMetaData, setCurrentMetaData] = React.useState<any>(null);
-  const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [isUnlockEntryModalOpen, setIsUnlockEntryModalOpen] = React.useState(false);
+  const [isLockExpriedModalOpen, setIsLockExpriedModalOpen] = React.useState(false);
+  const [hasLockExpiredModalShown, setHasLockExpiredModalShown] = React.useState(false);
   const [isEntryChanged, setIsEntryChanged] = React.useState(false);
-
   const [isReady, setIsReady] = React.useState(false);
   // Create a ref to hold the latest currentMetaData
   const currentMetaDataRef = React.useRef(currentMetaData);
@@ -181,13 +183,34 @@ const CheckInOut = () => {
   // set interval for 1 min
   React.useEffect(() => {
     const intervalId = setInterval(async () => {
-      // Execute the desired action here
       if (isEntryChanged) {
         // Update existing lock with new timestamp if entry is locked.
         if (currentMetaDataRef?.current?.uid) {
           console.log("Update metadata for lock with last update time.");
           await updateEntryLock();
         }
+      }
+
+      const checkTimeDifference = async () => {
+        const lastUpdateAtTime: any = new Date(currentMetaDataRef.current.updated_at);
+        const currentTime: any = new Date();
+        const timeDifference: any = currentTime - lastUpdateAtTime;
+
+        // Check if the time difference is more than 15 minutes (15 * 60 * 1000 milliseconds)
+        if (timeDifference > 15 * 60 * 1000) {
+          if (!hasLockExpiredModalShown) {
+            showLockExpiredModal();
+            setHasLockExpiredModalShown(true)
+          }
+        }
+      };
+
+      // Call the function to check time difference
+      if (
+        currentMetaDataRef.current && currentMetaDataRef.current.EntryLocked && currentMetaDataRef.current?.entity_uid ===
+        appSdk?.location?.CustomField?.entry?._data?.uid
+      ) {
+        checkTimeDifference();
       }
     }, 60000);
     return () => clearInterval(intervalId);
@@ -212,10 +235,10 @@ const CheckInOut = () => {
       setDataLoading(true)
       setButtonDisabled(true);
     }
-  }, [currentUserData.isAdmin, currentUserData?.uid, fieldData?.user?.uid,isModalOpen]);
+  }, [currentUserData.isAdmin, currentUserData?.uid, fieldData?.user?.uid,isUnlockEntryModalOpen]);
 
   const showUnlockModal = () => {
-    setIsModalOpen(true);
+    setIsUnlockEntryModalOpen(true);
     cbModal({
       component: ({ closeModal }: { closeModal: () => void }) => ( 
         <UnlockEntryModal 
@@ -223,7 +246,24 @@ const CheckInOut = () => {
           unlockAction={unLockEntry} 
           closeModal={() => {
             closeModal();
-            setIsModalOpen(false); // Close the modal and update state
+            setIsUnlockEntryModalOpen(false); // Close the modal and update state
+          }}
+        />
+      ),
+    });
+  };
+
+  const showLockExpiredModal = () => {
+    setIsLockExpriedModalOpen(true);
+    cbModal({
+      component: ({ closeModal }: { closeModal: () => void }) => ( 
+        <LockExpiredModal 
+          currentMetaData={currentMetaData} 
+          unlockAction={unLockEntry} 
+          closeModal={() => {
+            closeModal();
+            setIsLockExpriedModalOpen(false); // Close the modal and update state
+            setHasLockExpiredModalShown(false);
           }}
         />
       ),
