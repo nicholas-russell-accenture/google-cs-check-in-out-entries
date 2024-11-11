@@ -10,28 +10,37 @@ import RequestUnlockModal from "@/app/components/RequestUnlockModal";
 import ShowModal from "./ShowModal";
 import UnlockEntryModal from "@/app/components/UnlockEntryModal";
 import LockExpiredModal from "@/app/components/LockExpiredModal";
+import { on } from "events";
 
 const CheckInOut = () => {
   const appSdk = useAppSdk();
   const { fieldData, currentUserData } = useCheckOutData();
   const [dataLoading, setDataLoading] = React.useState<boolean>(false);
   const [buttonDisabled, setButtonDisabled] = React.useState<boolean>(true);
-  const [currentMetaData, setCurrentMetaData] = React.useState<any>(null);
-  const [isUnlockEntryModalOpen, setIsUnlockEntryModalOpen] = React.useState(false);
-  const [hasLockExpiredModalShown, setHasLockExpiredModalShown] = React.useState(false);
+  const [currentMetaData, setCurrentMetaData] = React.useState<any>(undefined);
+  const [isUnlockEntryModalOpen, setIsUnlockEntryModalOpen] =
+    React.useState(false);
   const [isEntryChanged, setIsEntryChanged] = React.useState(false);
   const [extensionUid, setExtensionUid] = React.useState<string>("");
+  const [contentstackAppDomain, setContentstackAppDomain] =
+    React.useState<string>("");
 
   const [isReady, setIsReady] = React.useState(false);
+
   // Create a ref to hold the latest currentMetaData
   const currentMetaDataRef = React.useRef(currentMetaData);
+
+  // Define Refs for modals
+  const lockExpiredModalVisibleRef = React.useRef(false);
+  const entryIsLockedModalVisibleRef = React.useRef(false);
 
   // Effect to update the ref when currentMetaData changes
   React.useEffect(() => {
     currentMetaDataRef.current = currentMetaData;
   }, [currentMetaData]);
 
-  // for check entry is locked or not
+  // Determine whether or not the entry is locked.
+  // If locked, show the modal to request an unlock or return to dashboard.
   React.useEffect(() => {
     const fetchMetadata = async () => {
       try {
@@ -45,32 +54,45 @@ const CheckInOut = () => {
           );
         });
 
-        if (filteredEntry?.length != 0) {
-          setCurrentMetaData(filteredEntry[0]);
+        setCurrentMetaData(filteredEntry[0]);
+
+        const showEntryIsLockedModal = () => {
           setTimeout(() => {
-            if (filteredEntry[0].created_by !== currentUserData.uid) {
-              cbModal({
-                component: () => (
-                  <RequestUnlockModal
-                    currentMetaData={filteredEntry[0]}
-                    appSdk={appSdk}
-                  />
-                ),
-              });
-            }
+            cbModal({
+              component: () => (
+                <RequestUnlockModal
+                  currentMetaData={filteredEntry[0]}
+                  appSdk={appSdk}
+                  contentstackAppDomain={contentstackAppDomain}
+                />
+              ),
+              modalProps: {
+                onClose: () => {
+                  showEntryIsLockedModal();
+                },
+              },
+            });
           }, 0);
-        } else {
-          setCurrentMetaData(null);
+        };
+
+        if (
+          filteredEntry?.length != 0 &&
+          contentstackAppDomain !== "" &&
+          filteredEntry[0].created_by !== currentUserData.uid &&
+          !entryIsLockedModalVisibleRef.current
+        ) {
+          entryIsLockedModalVisibleRef.current = true;
+          showEntryIsLockedModal();
         }
       } catch (error) {
-        console.error("Error retrieving metadata:", error);
+        console.error("Error retrieving entry lock meta-data:", error);
       }
     };
 
     fetchMetadata();
-  }, [appSdk, currentUserData]);
+  }, [appSdk, currentUserData, contentstackAppDomain]);
 
-  // Unlocks the entry
+  // Unlocks the entry.
   const unLockEntry = React.useCallback(async (): Promise<void> => {
     if (!appSdk) return; // Exit if appSdk is not available.
 
@@ -80,12 +102,13 @@ const CheckInOut = () => {
       appSdk?.location?.CustomField?.entry?._data?.uid
     ) {
       try {
+        // Delete the metadata element.
         await appSdk.metadata.deleteMetaData({
           uid: currentMetaDataRef.current.uid,
         });
 
-        // Set CurrentMetaData and currentMetaDataRef.current to null after unlocking
-        setCurrentMetaData(null);
+        // Set CurrentMetaData and currentMetaDataRef.current to undefined after unlocking
+        setCurrentMetaData(undefined);
         setDataLoading(false);
         return fieldData.status;
       } catch (error) {
@@ -101,7 +124,9 @@ const CheckInOut = () => {
       appSdk?.location?.CustomField?.entry?.content_type?.uid;
 
     if (!appSdk || extensionUid == "") {
-      console.log("Exension UID is not set, current value:", extensionUid);
+      console.error(
+        "Error creating an entry lock meta-data entry: either the appSdk or extensionUid is not available."
+      );
       return; // App SDK is not available.
     }
 
@@ -110,7 +135,6 @@ const CheckInOut = () => {
     const currentTime = currentDate.toLocaleTimeString();
 
     try {
-      // bltbce177efe7284a0f: testing extension uid.
       const response = await appSdk?.metadata.createMetaData({
         entity_uid: entryId,
         type: "entry",
@@ -158,73 +182,122 @@ const CheckInOut = () => {
   }, [appSdk, currentUserData]);
 
   const handleChange = async (whatChanged: any) => {
-    // Create a new lock if entry is unlocked.
-    if (currentMetaDataRef.current === null && fieldData?.status === 0) {
-      await createEntryLock();
-    }
 
-    // function for check is entry is changed or not
-    const entryHasChanged = (whatChanged: any): boolean => {
-      // Iterate over each available property on whatChanged and compare with the original value on the entry:
-      for (const key in whatChanged) {
-        if (whatChanged[key] instanceof Object) {
-          if (
-            JSON.stringify(whatChanged[key]) !==
-            JSON.stringify(appSdk?.location?.CustomField?.entry?._data[key])
-          ) {
-            return true;
+    // Function to compare original/changed entry and return true if they are different
+    function compareObjects(changedObject: any, originalObject: any) {
+      let hasChanges = false;
+
+      // Function to recursively compare each key
+      function compareKeys(changed: any, original: any, parentKey = "") {
+        // Loop through the keys in the changed object
+        for (let key in changed) {
+          if (changed.hasOwnProperty(key)) {
+            const changedValue = changed[key];
+            const originalValue = original[key];
+
+            // Construct the full path of the key
+            const fullKey = parentKey ? `${parentKey}.${key}` : key;
+
+            // If both values are objects, recursively compare them
+            if (
+              typeof changedValue === "object" &&
+              changedValue !== null &&
+              typeof originalValue === "object" &&
+              originalValue !== null
+            ) {
+              compareKeys(changedValue, originalValue, fullKey);
+            } else {
+              // If the values are different, log the change and mark hasChanges as true
+              if (changedValue !== originalValue) {
+                hasChanges = true;
+              }
+            }
           }
-        } else if (
-          whatChanged[key] !== appSdk?.location?.CustomField?.entry?._data[key]
-        ) {
-          return true;
         }
       }
 
-      // Else, nothing has changed.
-      return false;
-    };
+      // Start comparing the two objects
+      compareKeys(changedObject, originalObject);
 
-    if (entryHasChanged(whatChanged)) {
+      return hasChanges;
+    }
+
+    // Create a new lock if entry is unlocked.
+    if (
+      currentMetaDataRef.current === undefined &&
+      fieldData?.status === 0 &&
+      compareObjects(whatChanged, appSdk?.location?.CustomField?.entry?._data)
+    ) {
+      await createEntryLock();
+    }
+
+    if (
+      compareObjects(whatChanged, appSdk?.location?.CustomField?.entry?._data)
+    ) {
       setIsEntryChanged(true);
     }
   };
 
-  // set interval for 1 min
+  // Every 60 seconds, update the entry lock metadata with the latest timestamp.
   React.useEffect(() => {
-    const intervalId = setInterval(async () => {
-      if (isEntryChanged) {
-        // Update existing lock with new timestamp if entry is locked.
-        if (currentMetaDataRef?.current?.uid) {
-          console.log("Update metadata for lock with last update time.");
-          await updateEntryLock();
-        }
-      }
-
-      const checkTimeDifference = async () => {
-        const lastUpdateAtTime: any = new Date(currentMetaDataRef.current.updated_at);
-        const currentTime: any = new Date();
-        const timeDifference: any = currentTime - lastUpdateAtTime;
-
-        // Check if the time difference is more than 15 minutes (15 * 60 * 1000 milliseconds)
-        if (timeDifference > 15 * 60 * 1000) {
-          if (!hasLockExpiredModalShown) {
-            showLockExpiredModal();
-            setHasLockExpiredModalShown(true)
+    if (
+      appSdk &&
+      currentMetaDataRef.current &&
+      currentMetaDataRef.current?.created_by === currentUserData?.uid &&
+      currentMetaDataRef.current.EntryLocked
+    ) {
+      const intervalId = setInterval(async () => {
+        if (isEntryChanged) {
+          // Update existing lock with new timestamp if entry is locked.
+          if (currentMetaDataRef?.current?.uid) {
+            console.log("Update entry lock meta-data with last update time.");
+            await updateEntryLock();
           }
         }
-      };
 
-      // Call the function to check time difference
-      if (
-        currentMetaDataRef.current && currentMetaDataRef.current.EntryLocked && currentMetaDataRef.current?.entity_uid ===
-        appSdk?.location?.CustomField?.entry?._data?.uid
-      ) {
+        const checkTimeDifference = async () => {
+          console.log("Checking time difference.");
+          const lastUpdateAtTime: any = new Date(
+            currentMetaDataRef.current.updated_at
+          );
+          const currentTime: any = new Date();
+          const timeDifference: any = currentTime - lastUpdateAtTime;
+
+          // Check if the time difference is more than 15 minutes (15 * 60 * 1000 milliseconds)
+          if (timeDifference > 15 * 60 * 1000) {
+            if (!lockExpiredModalVisibleRef.current) {
+              // Stop the counter
+              clearInterval(intervalId);
+
+              // Delete the metadata element.
+              await appSdk.metadata.deleteMetaData({
+                uid: currentMetaDataRef.current.uid,
+              });
+
+              // Set CurrentMetaData and currentMetaDataRef.current to undefined after unlocking
+              setCurrentMetaData(undefined);
+              currentMetaDataRef.current = undefined;
+
+              // Show the modal that indicates that the lock is expired.
+              showLockExpiredModal();
+            }
+          }
+        };
+
         checkTimeDifference();
-      }
-    }, 60000);
-    return () => clearInterval(intervalId);
-  }, [appSdk, isEntryChanged]);
+      }, 60000);
+      return () => clearInterval(intervalId);
+    }
+
+    // Current user has not locked the entry.
+    return () => false;
+  }, [
+    appSdk,
+    isEntryChanged,
+    currentMetaData,
+    currentUserData,
+    currentMetaDataRef.current,
+  ]);
 
   // Handle onChange event
   React.useEffect(() => {
@@ -246,7 +319,12 @@ const CheckInOut = () => {
       setDataLoading(true);
       setButtonDisabled(true);
     }
-  }, [currentUserData.isAdmin, currentUserData?.uid, fieldData?.user?.uid,isUnlockEntryModalOpen]);
+  }, [
+    currentUserData.isAdmin,
+    currentUserData?.uid,
+    fieldData?.user?.uid,
+    isUnlockEntryModalOpen,
+  ]);
 
   const showUnlockModal = () => {
     setIsUnlockEntryModalOpen(true);
@@ -265,14 +343,15 @@ const CheckInOut = () => {
   };
 
   const showLockExpiredModal = () => {
+    lockExpiredModalVisibleRef.current = true;
     cbModal({
-      component: ({ closeModal }: { closeModal: () => void }) => ( 
-        <LockExpiredModal 
-          currentMetaData={currentMetaData} 
-          unlockAction={unLockEntry} 
+      component: ({ closeModal }: { closeModal: () => void }) => (
+        <LockExpiredModal
+          currentMetaData={currentMetaData}
+          unlockAction={unLockEntry}
           closeModal={() => {
             closeModal();
-            setHasLockExpiredModalShown(false);
+            lockExpiredModalVisibleRef.current = false;
           }}
         />
       ),
@@ -297,8 +376,14 @@ const CheckInOut = () => {
       fetch("/api/contentstack/extension/metadata")
         .then((response) => response.json())
         .then((data) => {
-          if (data?.extensionUid && data.extensionUid !== "") {
+          if (
+            data?.extensionUid &&
+            data.extensionUid !== "" &&
+            data?.contentstackAppDomain &&
+            data.contentstackAppDomain !== ""
+          ) {
             setExtensionUid(data.extensionUid);
+            setContentstackAppDomain(data.contentstackAppDomain);
             setIsReady(true);
           }
         });
@@ -316,9 +401,11 @@ const CheckInOut = () => {
 
   let entryLockMessage = "Entry is unlocked.";
   let entryIsLocked = false;
-  if (currentMetaData !== null) {
+
+  if (currentMetaData !== undefined) {
+    console.log("Entry is locked.", currentMetaData);
     entryLockMessage = "Entry is locked.";
-    if (currentMetaData.updated_by === currentUserData.uid) {
+    if (currentMetaData?.updated_by === currentUserData.uid) {
       entryLockMessage =
         "Entry locked. Save changes before unlocking or going inactive to prevent data loss.";
     }
