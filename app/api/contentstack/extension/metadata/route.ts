@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-export async function GET(req: Request) {
+export async function GET() {
   const extensionUid =
     process.env.CONTENTSTACK_ENTRY_LOCK_METADATA_EXTENSION_UID || "";
 
@@ -17,6 +17,7 @@ export async function GET(req: Request) {
       extensionUid: extensionUid,
     });
   } catch (error) {
+    console.log(error);
     return NextResponse.json(
       { error: "Failed to decode token" },
       { status: 400 }
