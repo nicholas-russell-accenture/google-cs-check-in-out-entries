@@ -2,7 +2,7 @@
 "use client";
 
 import React from "react";
-import moment from 'moment';
+import moment from "moment";
 import { useAppSdk } from "@/app/hooks/useAppSdk";
 import { useCheckOutData } from "@/app/hooks/useCheckOutData";
 import { Button, cbModal, Icon, Info } from "@contentstack/venus-components";
@@ -19,6 +19,7 @@ const CheckInOut = () => {
   const [currentMetaData, setCurrentMetaData] = React.useState<any>(null);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [isEntryChanged, setIsEntryChanged] = React.useState(false);
+  const [extensionUid, setExtensionUid] = React.useState<string>("");
 
   const [isReady, setIsReady] = React.useState(false);
   // Create a ref to hold the latest currentMetaData
@@ -49,7 +50,10 @@ const CheckInOut = () => {
             if (filteredEntry[0].created_by !== currentUserData.uid) {
               cbModal({
                 component: () => (
-                  <RequestUnlockModal currentMetaData={filteredEntry[0]} appSdk={appSdk}/>
+                  <RequestUnlockModal
+                    currentMetaData={filteredEntry[0]}
+                    appSdk={appSdk}
+                  />
                 ),
               });
             }
@@ -66,50 +70,52 @@ const CheckInOut = () => {
   }, [appSdk, currentUserData]);
 
   // Unlocks the entry
-  const unLockEntry = React.useCallback(
-    async (): Promise<void> => {
-      if (!appSdk) return; // Exit if appSdk is not available.
+  const unLockEntry = React.useCallback(async (): Promise<void> => {
+    if (!appSdk) return; // Exit if appSdk is not available.
 
-      // Check if currentMetaData matches the entry being unlocked
-      if (
-        currentMetaDataRef.current?.entity_uid ===
-        appSdk?.location?.CustomField?.entry?._data?.uid
-      ) {
-        try {
-          await appSdk.metadata.deleteMetaData({
-            uid: currentMetaDataRef.current.uid,
-          });
+    // Check if currentMetaData matches the entry being unlocked
+    if (
+      currentMetaDataRef.current?.entity_uid ===
+      appSdk?.location?.CustomField?.entry?._data?.uid
+    ) {
+      try {
+        await appSdk.metadata.deleteMetaData({
+          uid: currentMetaDataRef.current.uid,
+        });
 
-          // Set CurrentMetaData and currentMetaDataRef.current to null after unlocking
-          setCurrentMetaData(null);
-          setDataLoading(false);          
-          return fieldData.status
-        } catch (error) {
-          console.error("Error unlocking entry:", error);
-        }
+        // Set CurrentMetaData and currentMetaDataRef.current to null after unlocking
+        setCurrentMetaData(null);
+        setDataLoading(false);
+        return fieldData.status;
+      } catch (error) {
+        console.error("Error unlocking entry:", error);
       }
-    },
-    [appSdk]
-  );
+    }
+  }, [appSdk]);
 
   // Create entry lock meta-data
   const createEntryLock = React.useCallback(async (): Promise<void> => {
     const entryId: any = appSdk?.location?.CustomField?.entry?._data?.uid;
-    const contentTypeUid: any = appSdk?.location?.CustomField?.entry?.content_type?.uid;
+    const contentTypeUid: any =
+      appSdk?.location?.CustomField?.entry?.content_type?.uid;
 
-    if (!appSdk) return; // App SDK is not available.
+    if (!appSdk || extensionUid == "") {
+      console.log("Exension UID is not set, current value:", extensionUid);
+      return; // App SDK is not available.
+    }
 
     // Get the browser's current time.
     const currentDate = new Date();
     const currentTime = currentDate.toLocaleTimeString();
 
     try {
+      // bltbce177efe7284a0f: testing extension uid.
       const response = await appSdk?.metadata.createMetaData({
         entity_uid: entryId,
         type: "entry",
         _content_type_uid: contentTypeUid,
         EntryLocked: true,
-        extension_uid: "bltbce177efe7284a0f",
+        extension_uid: extensionUid,
         createdByUserName: currentUserData?.name,
         currentUserTime: currentTime,
       });
@@ -122,7 +128,7 @@ const CheckInOut = () => {
     } catch (error) {
       console.error("Error creating entry lock:", error);
     }
-  }, [appSdk, currentUserData]);
+  }, [appSdk, extensionUid, currentUserData]);
 
   // update entry lock meta-data
   const updateEntryLock = React.useCallback(async (): Promise<void> => {
@@ -161,10 +167,15 @@ const CheckInOut = () => {
       // Iterate over each available property on whatChanged and compare with the original value on the entry:
       for (const key in whatChanged) {
         if (whatChanged[key] instanceof Object) {
-          if (JSON.stringify(whatChanged[key]) !== JSON.stringify(appSdk?.location?.CustomField?.entry?._data[key])) {
+          if (
+            JSON.stringify(whatChanged[key]) !==
+            JSON.stringify(appSdk?.location?.CustomField?.entry?._data[key])
+          ) {
             return true;
           }
-        } else if (whatChanged[key] !== appSdk?.location?.CustomField?.entry?._data[key]) {
+        } else if (
+          whatChanged[key] !== appSdk?.location?.CustomField?.entry?._data[key]
+        ) {
           return true;
         }
       }
@@ -173,8 +184,8 @@ const CheckInOut = () => {
       return false;
     };
 
-    if(entryHasChanged(whatChanged)) {
-      setIsEntryChanged(true)
+    if (entryHasChanged(whatChanged)) {
+      setIsEntryChanged(true);
     }
   };
 
@@ -191,13 +202,14 @@ const CheckInOut = () => {
       }
     }, 60000);
     return () => clearInterval(intervalId);
-  }, [appSdk,isEntryChanged]);
+  }, [appSdk, isEntryChanged]);
 
   // Handle onChange event
   React.useEffect(() => {
     const entry: any = appSdk?.location.CustomField?.entry;
+    if (extensionUid === "") return;
     entry.onChange((whatChanged: any) => handleChange(whatChanged));
-  }, [appSdk]);
+  }, [appSdk, extensionUid]);
 
   React.useEffect(() => {
     if (
@@ -206,21 +218,26 @@ const CheckInOut = () => {
       fieldData?.status === 0
     ) {
       setButtonDisabled(false);
-      setDataLoading(false)
+      setDataLoading(false);
       return;
     } else {
-      setDataLoading(true)
+      setDataLoading(true);
       setButtonDisabled(true);
     }
-  }, [currentUserData.isAdmin, currentUserData?.uid, fieldData?.user?.uid,isModalOpen]);
+  }, [
+    currentUserData.isAdmin,
+    currentUserData?.uid,
+    fieldData?.user?.uid,
+    isModalOpen,
+  ]);
 
   const showUnlockModal = () => {
     setIsModalOpen(true);
     cbModal({
-      component: ({ closeModal }: { closeModal: () => void }) => ( 
-        <UnlockEntryModal 
-          currentMetaData={currentMetaData} 
-          unlockAction={unLockEntry} 
+      component: ({ closeModal }: { closeModal: () => void }) => (
+        <UnlockEntryModal
+          currentMetaData={currentMetaData}
+          unlockAction={unLockEntry}
           closeModal={() => {
             closeModal();
             setIsModalOpen(false); // Close the modal and update state
@@ -230,25 +247,29 @@ const CheckInOut = () => {
     });
   };
 
-  const handleSaveEntry = React.useCallback(
-    async (): Promise<void> => {
-      try {
-        const entry = appSdk?.location?.CustomField?.entry;
-        if (!entry) return;
+  const handleSaveEntry = React.useCallback(async (): Promise<void> => {
+    try {
+      const entry = appSdk?.location?.CustomField?.entry;
+      if (!entry) return;
 
-        entry.onSave(() => {
-          unLockEntry();
-        });
-      } catch (error) {
-        console.error("Error saving entry:", error);
-      }
-    },
-    [appSdk]
-  );
+      entry.onSave(() => {
+        unLockEntry();
+      });
+    } catch (error) {
+      console.error("Error saving entry:", error);
+    }
+  }, [appSdk]);
 
   React.useEffect(() => {
     if (appSdk) {
-      setIsReady(true);
+      fetch("/api/contentstack/extension/metadata")
+        .then((response) => response.json())
+        .then((data) => {
+          if (data?.extensionUid && data.extensionUid !== "") {
+            setExtensionUid(data.extensionUid);
+            setIsReady(true);
+          }
+        });
     }
   }, [appSdk]);
 
@@ -265,8 +286,9 @@ const CheckInOut = () => {
   let entryIsLocked = false;
   if (currentMetaData !== null) {
     entryLockMessage = "Entry is locked.";
-    if(currentMetaData.updated_by === currentUserData.uid){
-      entryLockMessage = "Entry locked. Save changes before unlocking or going inactive to prevent data loss.";
+    if (currentMetaData.updated_by === currentUserData.uid) {
+      entryLockMessage =
+        "Entry locked. Save changes before unlocking or going inactive to prevent data loss.";
     }
     entryIsLocked = true;
   }
@@ -276,7 +298,7 @@ const CheckInOut = () => {
       <ShowModal />
       <div className="flex flex-row justify-center items-center w-full pr-2">
         <Info
-          icon={<Icon icon={entryIsLocked? "Error" : "Success"} />}
+          icon={<Icon icon={entryIsLocked ? "Error" : "Success"} />}
           type={entryIsLocked ? "warning" : "success"}
           className="w-full"
           content={
