@@ -18,7 +18,6 @@ const CheckInOut = () => {
   const [buttonDisabled, setButtonDisabled] = React.useState<boolean>(true);
   const [currentMetaData, setCurrentMetaData] = React.useState<any>(null);
   const [isUnlockEntryModalOpen, setIsUnlockEntryModalOpen] = React.useState(false);
-  const [isLockExpriedModalOpen, setIsLockExpriedModalOpen] = React.useState(false);
   const [hasLockExpiredModalShown, setHasLockExpiredModalShown] = React.useState(false);
   const [isEntryChanged, setIsEntryChanged] = React.useState(false);
   const [extensionUid, setExtensionUid] = React.useState<string>("");
@@ -266,7 +265,6 @@ const CheckInOut = () => {
   };
 
   const showLockExpiredModal = () => {
-    setIsLockExpriedModalOpen(true);
     cbModal({
       component: ({ closeModal }: { closeModal: () => void }) => ( 
         <LockExpiredModal 
@@ -274,7 +272,6 @@ const CheckInOut = () => {
           unlockAction={unLockEntry} 
           closeModal={() => {
             closeModal();
-            setIsLockExpriedModalOpen(false); // Close the modal and update state
             setHasLockExpiredModalShown(false);
           }}
         />

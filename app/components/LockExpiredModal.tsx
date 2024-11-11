@@ -15,17 +15,7 @@ interface LockExpiredModalProps {
 }
 
 const LockExpiredModal: React.FC<LockExpiredModalProps> = (props) => {
-  const { unlockAction, closeModal } = props;
-
-  // const handleUnlock = async () => {
-  //   const status = await unlockAction();
-  //   closeModal(); // Close the modal after invoking unlockAction
-
-  //   // Check the returned status and open ReloadModal if status is 0
-  //   if (status !== undefined && status === 0) {
-  //     closeModal(); // Close the modal after invoking unlockAction
-  //   }
-  // };
+  const { closeModal } = props;
 
   return (
     <>
