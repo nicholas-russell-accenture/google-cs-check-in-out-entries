@@ -2,7 +2,6 @@
 "use client";
 
 import React from "react";
-import moment from "moment";
 import { useAppSdk } from "@/app/hooks/useAppSdk";
 import { useCheckOutData } from "@/app/hooks/useCheckOutData";
 import { Button, cbModal, Icon, Info } from "@contentstack/venus-components";
