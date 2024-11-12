@@ -109,6 +109,7 @@ const CheckInOut = () => {
         // Set CurrentMetaData and currentMetaDataRef.current to undefined after unlocking
         setCurrentMetaData(undefined);
         setDataLoading(false);
+        currentMetaDataRef.current = undefined;
         return fieldData.status;
       } catch (error) {
         console.error("Error unlocking entry:", error);
