@@ -19,7 +19,6 @@ const CheckInOut = () => {
   const [currentMetaData, setCurrentMetaData] = React.useState<any>(undefined);
   const [isUnlockEntryModalOpen, setIsUnlockEntryModalOpen] =
     React.useState(false);
-  const [isEntryChanged, setIsEntryChanged] = React.useState(false);
   const [extensionUid, setExtensionUid] = React.useState<string>("");
   const [contentstackAppDomain, setContentstackAppDomain] =
     React.useState<string>("");
@@ -314,7 +313,6 @@ const CheckInOut = () => {
     return () => false;
   }, [
     appSdk,
-    isEntryChanged,
     currentMetaData,
     currentUserData,
     currentMetaDataRef.current,
