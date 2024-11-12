@@ -32,6 +32,7 @@ const CheckInOut = () => {
   // Define Refs for modals
   const lockExpiredModalVisibleRef = React.useRef(false);
   const entryIsLockedModalVisibleRef = React.useRef(false);
+  const lastChangeTimestampRef = React.useRef<number | undefined>(undefined);
 
   // Effect to update the ref when currentMetaData changes
   React.useEffect(() => {
@@ -171,7 +172,9 @@ const CheckInOut = () => {
 
       if (response) {
         setCurrentMetaData(response.metadata);
-        setIsEntryChanged(false);
+
+        const currentTimestamp = Date.now();
+        lastChangeTimestampRef.current = currentTimestamp;
       } else {
         console.log("Entry lock meta-data entry creation failed.");
       }
@@ -181,7 +184,6 @@ const CheckInOut = () => {
   }, [appSdk, currentUserData]);
 
   const handleChange = async (whatChanged: any) => {
-
     // Function to compare original/changed entry and return true if they are different
     function compareObjects(changedObject: any, originalObject: any) {
       let hasChanges = false;
@@ -189,7 +191,7 @@ const CheckInOut = () => {
       // Function to recursively compare each key
       function compareKeys(changed: any, original: any, parentKey = "") {
         // Loop through the keys in the changed object
-        for (let key in changed) {
+        for (const key in changed) {
           if (changed.hasOwnProperty(key)) {
             const changedValue = changed[key];
             const originalValue = original[key];
@@ -221,19 +223,48 @@ const CheckInOut = () => {
       return hasChanges;
     }
 
-    // Create a new lock if entry is unlocked.
-    if (
-      currentMetaDataRef.current === undefined &&
-      fieldData?.status === 0 &&
-      compareObjects(whatChanged, appSdk?.location?.CustomField?.entry?._data)
-    ) {
-      await createEntryLock();
-    }
+    const currentTimestamp = Date.now();
+    if (lastChangeTimestampRef.current !== undefined) {
+      // Get the time since the last change
+      const timeSinceLastChange =
+        currentTimestamp - lastChangeTimestampRef.current;
 
-    if (
-      compareObjects(whatChanged, appSdk?.location?.CustomField?.entry?._data)
-    ) {
-      setIsEntryChanged(true);
+      // If the time since the last change is greater than 59 seconds.
+      if (timeSinceLastChange >= 59000) {
+        if (
+          compareObjects(
+            whatChanged,
+            appSdk?.location?.CustomField?.entry?._data
+          )
+        ) {
+          lastChangeTimestampRef.current = currentTimestamp;
+          console.log(
+            "Updating last changed timestamp.",
+            lastChangeTimestampRef.current
+          );
+          updateEntryLock();
+        }
+      } else {
+        console.log(
+          "No need to update entry lock yet, it's only been",
+          timeSinceLastChange,
+          "milliseconds."
+        );
+      }
+    } else {
+      // Create a new lock if entry is unlocked.
+      if (
+        currentMetaDataRef.current === undefined &&
+        fieldData?.status === 0 &&
+        compareObjects(whatChanged, appSdk?.location?.CustomField?.entry?._data)
+      ) {
+        await createEntryLock();
+        lastChangeTimestampRef.current = currentTimestamp;
+        console.log(
+          "Updating last changed timestamp.",
+          lastChangeTimestampRef.current
+        );
+      }
     }
   };
 
@@ -246,16 +277,7 @@ const CheckInOut = () => {
       currentMetaDataRef.current.EntryLocked
     ) {
       const intervalId = setInterval(async () => {
-        if (isEntryChanged) {
-          // Update existing lock with new timestamp if entry is locked.
-          if (currentMetaDataRef?.current?.uid) {
-            console.log("Update entry lock meta-data with last update time.");
-            await updateEntryLock();
-          }
-        }
-
         const checkTimeDifference = async () => {
-          console.log("Checking time difference.");
           const lastUpdateAtTime: any = new Date(
             currentMetaDataRef.current.updated_at
           );
