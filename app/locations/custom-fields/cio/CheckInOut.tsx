@@ -443,7 +443,7 @@ const CheckInOut = () => {
             <>
               <h3 className="pb-2">{entryLockMessage}</h3>
 
-              <div className="">
+              {entryIsLocked ? <div className="">
                 <Button
                   buttonType="secondary"
                   disabled={buttonDisabled || dataLoading}
@@ -459,9 +459,11 @@ const CheckInOut = () => {
                   }}
                   icon={entryIsLocked ? "OpenLock" : "Lock"}
                 >
-                  {entryIsLocked ? "Unlock Entry" : "Lock Entry"}
+                  Unlock Entry
+                  {/* {entryIsLocked ? "Unlock Entry" : "Lock Entry"} */}
                 </Button>
-              </div>
+              </div> : ""}
+              
             </>
           }
         />
