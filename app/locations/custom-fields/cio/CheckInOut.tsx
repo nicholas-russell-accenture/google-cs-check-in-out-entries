@@ -284,7 +284,7 @@ const CheckInOut = () => {
           const timeDifference: any = currentTime - lastUpdateAtTime;
 
           // Check if the time difference is more than 15 minutes (15 * 60 * 1000 milliseconds)
-          if (timeDifference > 15 * 60 * 1000) {
+          if (timeDifference > (((15 * 60) * 1000) - 1000)) {
             if (!lockExpiredModalVisibleRef.current) {
               // Stop the counter
               clearInterval(intervalId);
