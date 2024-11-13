@@ -114,6 +114,8 @@ export async function DELETE(req: Request) {
               {
                 error:
                   "Failed to delete metadata or an internal error occurred: could not get existing metadata.",
+                getMetadataResponse: getMetadataResponse,
+                
               },
               { status: 500 }
             );
