@@ -64,6 +64,7 @@ export async function DELETE(req: Request) {
               "Content-Type": "application/json",
               api_key: apiKey, // API Key now guaranteed to be defined
               authorization: authorizationToken, // Access Token now guaranteed to be defined
+              branch: currentBranch
             },
           });
 
