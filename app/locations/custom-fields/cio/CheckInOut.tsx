@@ -10,7 +10,6 @@ import RequestUnlockModal from "@/app/components/RequestUnlockModal";
 import ShowModal from "./ShowModal";
 import UnlockEntryModal from "@/app/components/UnlockEntryModal";
 import LockExpiredModal from "@/app/components/LockExpiredModal";
-import { set } from "lodash";
 
 const CheckInOut = () => {
   const appSdk = useAppSdk();
@@ -42,7 +41,7 @@ const CheckInOut = () => {
       console.log("Unlock attempt failed: branch value is not available for use in request.");
       return;
     }
-    
+
     try {
       const entryLockMetadataApiEndpointCallResponse = await fetch(
         `/api/contentstack/extension/metadata/delete?app-token=${appToken}&metadataId=${metadataId}&branch=${branch}`,
