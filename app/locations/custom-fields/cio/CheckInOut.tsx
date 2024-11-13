@@ -459,7 +459,7 @@ const CheckInOut = () => {
     } catch (error) {
       console.error("Error saving entry:", error);
     }
-  }, [appSdk]);
+  }, [appSdk, appToken]);
 
   React.useEffect(() => {
     if (appSdk) {
