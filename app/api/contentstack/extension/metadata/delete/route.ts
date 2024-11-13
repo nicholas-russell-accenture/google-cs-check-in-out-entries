@@ -15,11 +15,12 @@ export async function DELETE(req: Request) {
   const url = new URL(req.url); // Create a URL object from the request URL
   const metadataId = url.searchParams.get("metadataId"); // Get the 'metadataId' query parameter
   const appToken = url.searchParams.get("app-token");
+  const currentBranch = url.searchParams.get("branch");
 
   // Get the Stack API key from the environment variables
   const apiKey = process.env.CONTENTSTACK_API_KEY;
 
-  if (appToken) {
+  if (appToken && currentBranch) {
     try {
       // Decode the app-token (assuming it's a JWT)
       const decodedToken = jwt.decode(appToken); // Decodes without verification (just to read the payload)
@@ -79,6 +80,7 @@ export async function DELETE(req: Request) {
                   "Content-Type": "application/json",
                   api_key: apiKey, // API Key now guaranteed to be defined
                   authorization: authorizationToken, // Access Token now guaranteed to be defined
+                  branch: currentBranch
                 },
               });
 
@@ -114,8 +116,6 @@ export async function DELETE(req: Request) {
               {
                 error:
                   "Failed to delete metadata or an internal error occurred: could not get existing metadata.",
-                getMetadataResponse: getMetadataResponse,
-                
               },
               { status: 500 }
             );
@@ -143,6 +143,6 @@ export async function DELETE(req: Request) {
       );
     }
   } else {
-    return NextResponse.json({ error: "Missing app-token" }, { status: 400 });
+    return NextResponse.json({ error: "Missing required parameters." }, { status: 400 });
   }
 }
