@@ -10,11 +10,13 @@ import RequestUnlockModal from "@/app/components/RequestUnlockModal";
 import ShowModal from "./ShowModal";
 import UnlockEntryModal from "@/app/components/UnlockEntryModal";
 import LockExpiredModal from "@/app/components/LockExpiredModal";
+import { set } from "lodash";
 
 const CheckInOut = () => {
   const appSdk = useAppSdk();
   const { fieldData, currentUserData } = useCheckOutData();
   const [appToken, setAppToken] = React.useState<string | null>(null);
+  const [branch, setBranch] = React.useState<string | null>(null);
   const [dataLoading, setDataLoading] = React.useState<boolean>(false);
   const [buttonDisabled, setButtonDisabled] = React.useState<boolean>(true);
   const [currentMetaData, setCurrentMetaData] = React.useState<any>(undefined);
@@ -35,9 +37,15 @@ const CheckInOut = () => {
   const lastChangeTimestampRef = React.useRef<number | undefined>(undefined);
 
   const deleteMetadata = async (metadataId: string, appToken: string) => {
+
+    if (branch === null) {
+      console.log("Unlock attempt failed: branch value is not available for use in request.");
+      return;
+    }
+    
     try {
       const entryLockMetadataApiEndpointCallResponse = await fetch(
-        `/api/contentstack/extension/metadata/delete?app-token=${appToken}&metadataId=${metadataId}`,
+        `/api/contentstack/extension/metadata/delete?app-token=${appToken}&metadataId=${metadataId}&branch=${branch}`,
         {
           method: "DELETE", // Set the HTTP method to DELETE
           headers: {
@@ -456,6 +464,15 @@ const CheckInOut = () => {
 
   React.useEffect(() => {
     if (appSdk) {
+      // Get the current branch.
+      if (appSdk?.stack?.getCurrentBranch()?.uid) {
+        const branchUid = appSdk.stack.getCurrentBranch()?.uid;
+        if (branchUid) {
+          setBranch(branchUid);
+        }
+      }
+
+      // Find existing metadata.
       fetch("/api/contentstack/extension/metadata")
         .then((response) => response.json())
         .then((data) => {
