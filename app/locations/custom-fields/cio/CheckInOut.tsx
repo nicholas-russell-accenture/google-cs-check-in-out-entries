@@ -110,6 +110,7 @@ const CheckInOut = () => {
         setCurrentMetaData(undefined);
         setDataLoading(false);
         currentMetaDataRef.current = undefined;
+        lastChangeTimestampRef.current = undefined;
         return fieldData.status;
       } catch (error) {
         console.error("Error unlocking entry:", error);
@@ -259,9 +260,10 @@ const CheckInOut = () => {
         compareObjects(whatChanged, appSdk?.location?.CustomField?.entry?._data)
       ) {
         await createEntryLock();
+        console.log("Locking Entry.")
         lastChangeTimestampRef.current = currentTimestamp;
         console.log(
-          "Updating last changed timestamp.",
+          "Updating last changed timestamp..",
           lastChangeTimestampRef.current
         );
       }
@@ -298,6 +300,7 @@ const CheckInOut = () => {
               // Set CurrentMetaData and currentMetaDataRef.current to undefined after unlocking
               setCurrentMetaData(undefined);
               currentMetaDataRef.current = undefined;
+              lastChangeTimestampRef.current = undefined;
 
               // Show the modal that indicates that the lock is expired.
               showLockExpiredModal();
