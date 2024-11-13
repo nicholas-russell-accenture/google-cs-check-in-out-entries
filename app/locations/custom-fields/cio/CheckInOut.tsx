@@ -14,6 +14,7 @@ import LockExpiredModal from "@/app/components/LockExpiredModal";
 const CheckInOut = () => {
   const appSdk = useAppSdk();
   const { fieldData, currentUserData } = useCheckOutData();
+  const [appToken, setAppToken] = React.useState<string | null>(null);
   const [dataLoading, setDataLoading] = React.useState<boolean>(false);
   const [buttonDisabled, setButtonDisabled] = React.useState<boolean>(true);
   const [currentMetaData, setCurrentMetaData] = React.useState<any>(undefined);
@@ -32,6 +33,41 @@ const CheckInOut = () => {
   const lockExpiredModalVisibleRef = React.useRef(false);
   const entryIsLockedModalVisibleRef = React.useRef(false);
   const lastChangeTimestampRef = React.useRef<number | undefined>(undefined);
+
+  const deleteMetadata = async (metadataId: string, appToken: string) => {
+    try {
+      const entryLockMetadataApiEndpointCallResponse = await fetch(
+        `/api/contentstack/extension/metadata/delete?app-token=${appToken}&metadataId=${metadataId}`,
+        {
+          method: "DELETE", // Set the HTTP method to DELETE
+          headers: {
+            "Content-Type": "application/json", // Optional, if you're sending JSON data
+          },
+        }
+      );
+
+      // Check if the response was successful
+      if (!entryLockMetadataApiEndpointCallResponse.ok) {
+        console.log(
+          "Failure response:",
+          entryLockMetadataApiEndpointCallResponse
+        );
+        throw new Error("Failed to delete metadata");
+      } else {
+        // Entry lock metadata was successfully deleted.
+        const entryLockMetadataApiEndpointCallResponseJson =
+          await entryLockMetadataApiEndpointCallResponse.json();
+        console.log(entryLockMetadataApiEndpointCallResponseJson); // Log the response data (e.g., confirmation of deletion)
+
+        // Delete metadata
+        currentMetaDataRef.current = undefined;
+        setCurrentMetaData(undefined);
+        return true;
+      }
+    } catch (error) {
+      console.error("Error deleting metadata:", error);
+    }
+  };
 
   // Effect to update the ref when currentMetaData changes
   React.useEffect(() => {
@@ -101,22 +137,33 @@ const CheckInOut = () => {
       appSdk?.location?.CustomField?.entry?._data?.uid
     ) {
       try {
-        // Delete the metadata element.
-        await appSdk.metadata.deleteMetaData({
-          uid: currentMetaDataRef.current.uid,
-        });
+        // We need the JWT app-token from the URL for security reasons (verifies the identity of the user).
+        if (appToken) {
+          // Call the deleteMetadata function to unlock the entry.
+          const deleteMetadataResponse = await deleteMetadata(
+            currentMetaDataRef.current.uid,
+            appToken
+          );
 
-        // Set CurrentMetaData and currentMetaDataRef.current to undefined after unlocking
-        setCurrentMetaData(undefined);
-        setDataLoading(false);
-        currentMetaDataRef.current = undefined;
-        lastChangeTimestampRef.current = undefined;
+          if (deleteMetadataResponse) {
+            // Set CurrentMetaData and currentMetaDataRef.current to undefined after unlocking
+            setCurrentMetaData(undefined);
+            setDataLoading(false);
+            currentMetaDataRef.current = undefined;
+            lastChangeTimestampRef.current = undefined;
+          } else {
+            console.log("Unable to delete the entry lock metadata.");
+          }
+        } else {
+          console.log("App Token is not set. Cannot unlock entry.");
+        }
+
         return fieldData.status;
       } catch (error) {
         console.error("Error unlocking entry:", error);
       }
     }
-  }, [appSdk]);
+  }, [appSdk, appToken]);
 
   // Create entry lock meta-data
   const createEntryLock = React.useCallback(async (): Promise<void> => {
@@ -134,25 +181,26 @@ const CheckInOut = () => {
     // Get the browser's current time.
     const currentDate = new Date();
     const currentTime = currentDate.toLocaleTimeString();
+    if (currentMetaDataRef.current == undefined) {
+      try {
+        const response = await appSdk?.metadata.createMetaData({
+          entity_uid: entryId,
+          type: "entry",
+          _content_type_uid: contentTypeUid,
+          EntryLocked: true,
+          extension_uid: extensionUid,
+          createdByUserName: currentUserData?.name,
+          currentUserTime: currentTime,
+        });
 
-    try {
-      const response = await appSdk?.metadata.createMetaData({
-        entity_uid: entryId,
-        type: "entry",
-        _content_type_uid: contentTypeUid,
-        EntryLocked: true,
-        extension_uid: extensionUid,
-        createdByUserName: currentUserData?.name,
-        currentUserTime: currentTime,
-      });
-
-      if (response) {
-        setCurrentMetaData(response.metadata);
-      } else {
-        console.log("Entry lock meta-data entry creation failed.");
+        if (response) {
+          setCurrentMetaData(response.metadata);
+        } else {
+          console.log("Entry lock meta-data entry creation failed.");
+        }
+      } catch (error) {
+        console.error("Error creating entry lock:", error);
       }
-    } catch (error) {
-      console.error("Error creating entry lock:", error);
     }
   }, [appSdk, extensionUid, currentUserData]);
 
@@ -260,10 +308,10 @@ const CheckInOut = () => {
         compareObjects(whatChanged, appSdk?.location?.CustomField?.entry?._data)
       ) {
         await createEntryLock();
-        console.log("Locking Entry.")
+        console.log("Locking Entry.");
         lastChangeTimestampRef.current = currentTimestamp;
         console.log(
-          "Updating last changed timestamp..",
+          "Updating last changed timestamp.",
           lastChangeTimestampRef.current
         );
       }
@@ -287,23 +335,40 @@ const CheckInOut = () => {
           const timeDifference: any = currentTime - lastUpdateAtTime;
 
           // Check if the time difference is more than 15 minutes (15 * 60 * 1000 milliseconds)
-          if (timeDifference > (((15 * 60) * 1000) - 1000)) {
+          if (timeDifference > 15 * 60 * 1000 - 1000) {
             if (!lockExpiredModalVisibleRef.current) {
               // Stop the counter
               clearInterval(intervalId);
 
-              // Delete the metadata element.
-              await appSdk.metadata.deleteMetaData({
-                uid: currentMetaDataRef.current.uid,
-              });
+              try {
+                // We need the JWT app-token from the URL for security reasons (verifies the identity of the user).
+                if (appToken) {
+                  // Call the deleteMetadata function to unlock the entry.
+                  const deleteMetadataResponse = await deleteMetadata(
+                    currentMetaDataRef.current.uid,
+                    appToken
+                  );
 
-              // Set CurrentMetaData and currentMetaDataRef.current to undefined after unlocking
-              setCurrentMetaData(undefined);
-              currentMetaDataRef.current = undefined;
-              lastChangeTimestampRef.current = undefined;
+                  if (deleteMetadataResponse) {
+                    // Set CurrentMetaData and currentMetaDataRef.current to undefined after unlocking
+                    setCurrentMetaData(undefined);
+                    setDataLoading(false);
+                    currentMetaDataRef.current = undefined;
+                    lastChangeTimestampRef.current = undefined;
 
-              // Show the modal that indicates that the lock is expired.
-              showLockExpiredModal();
+                    // Show the modal that indicates that the lock is expired.
+                    showLockExpiredModal();
+                  } else {
+                    console.log("Unable to delete the entry lock metadata.");
+                  }
+                } else {
+                  console.log("App Token is not set. Cannot unlock entry.");
+                }
+
+                return fieldData.status;
+              } catch (error) {
+                console.error("Error unlocking entry:", error);
+              }
             }
           }
         };
@@ -315,12 +380,7 @@ const CheckInOut = () => {
 
     // Current user has not locked the entry.
     return () => false;
-  }, [
-    appSdk,
-    currentMetaData,
-    currentUserData,
-    currentMetaDataRef.current,
-  ]);
+  }, [appSdk, currentMetaData, currentUserData, currentMetaDataRef.current]);
 
   // Handle onChange event
   React.useEffect(() => {
@@ -410,6 +470,13 @@ const CheckInOut = () => {
             setIsReady(true);
           }
         });
+
+      // Get and store the signed access-token.
+      const queryParams = new URLSearchParams(window.location.search);
+      const token = queryParams.get("app-token"); // Extract app-token from URL
+      if (token) {
+        setAppToken(token); // Store the app-token in state
+      }
     }
   }, [appSdk]);
 
@@ -426,7 +493,6 @@ const CheckInOut = () => {
   let entryIsLocked = false;
 
   if (currentMetaData !== undefined) {
-    console.log("Entry is locked.", currentMetaData);
     entryLockMessage = "Entry is locked.";
     if (currentMetaData?.updated_by === currentUserData.uid) {
       entryLockMessage =
