@@ -10,7 +10,6 @@ import RequestUnlockModal from "@/app/components/RequestUnlockModal";
 import ShowModal from "./ShowModal";
 import UnlockEntryModal from "@/app/components/UnlockEntryModal";
 import LockExpiredModal from "@/app/components/LockExpiredModal";
-import { set } from "lodash";
 
 const CheckInOut = () => {
   const appSdk = useAppSdk();
