@@ -34,6 +34,7 @@ const CheckInOut = () => {
   const lockExpiredModalVisibleRef = React.useRef(false);
   const entryIsLockedModalVisibleRef = React.useRef(false);
   const lastChangeTimestampRef = React.useRef<number | undefined>(undefined);
+  const [attemptToLockFailed, setAttemptToLockFailed] = React.useState(false);
 
   const deleteMetadata = async (metadataId: string, appToken: string) => {
 
@@ -132,7 +133,7 @@ const CheckInOut = () => {
     };
 
     fetchMetadata();
-  }, [appSdk, currentUserData, contentstackAppDomain]);
+  }, [appSdk, currentUserData, contentstackAppDomain, attemptToLockFailed]);
 
   // Unlocks the entry.
   const unLockEntry = React.useCallback(async (): Promise<void> => {
@@ -207,6 +208,7 @@ const CheckInOut = () => {
         }
       } catch (error) {
         console.error("Error creating entry lock:", error);
+        setAttemptToLockFailed(true);
       }
     }
   }, [appSdk, extensionUid, currentUserData]);
