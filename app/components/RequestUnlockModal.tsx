@@ -53,11 +53,12 @@ const RequestUnlockModal = (props: any) => {
             buttonType="primary"
             onClick={() => {
               // Open the link in a new tab
-              window.open(
-                `${contentstackAppDomain}/#!/stack/${appSdk?.stack?._data?.api_key}/dashboard?branch=${appSdk?.stack?._currentBranch?.uid}`,
-                "_blank" // This specifies that the link should open in a new tab
-              );
-              // document.location.href = `${contentstackAppDomain}/#!/stack/${appSdk?.stack?._data?.api_key}/dashboard?branch=${appSdk?.stack?._currentBranch?.uid}`;
+              // window.open(
+              //   `${contentstackAppDomain}/#!/stack/${appSdk?.stack?._data?.api_key}/dashboard?branch=${appSdk?.stack?._currentBranch?.uid}`,
+              //   "_blank" // This specifies that the link should open in a new tab
+              // );
+              // dashboard page should open in same tab
+              document.location.href = `${contentstackAppDomain}/#!/stack/${appSdk?.stack?._data?.api_key}/dashboard?branch=${appSdk?.stack?._currentBranch?.uid}`;
             }}
           >
             Back to Dashboard
