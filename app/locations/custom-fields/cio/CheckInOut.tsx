@@ -254,6 +254,15 @@ const CheckInOut = () => {
             const changedValue = changed[key];
             const originalValue = original[key];
 
+            // for check change in Tags field
+            if (key === 'tags' && changed.tags && original.tags) {
+              for (let i = 0; i < original.tags.length; i++) {
+                if (original.tags[i] !== changed.tags[i]) {
+                  hasChanges = true;
+                }
+              }
+            }
+
             // Construct the full path of the key
             const fullKey = parentKey ? `${parentKey}.${key}` : key;
 
