@@ -60,7 +60,7 @@ const RequestUnlockModal = (props: any) => {
               // document.location.href = `${contentstackAppDomain}/#!/stack/${appSdk?.stack?._data?.api_key}/dashboard?branch=${appSdk?.stack?._currentBranch?.uid}`;
             }}
           >
-            Back to Dashboard
+            Open Dashboard
           </Button>
         </ButtonGroup>
       </ModalFooter>
