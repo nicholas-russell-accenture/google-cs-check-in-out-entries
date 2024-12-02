@@ -279,8 +279,13 @@ const CheckInOut = () => {
             ) {
               compareKeys(changedValue, originalValue, fullKey);
             } else {
+              console.log("changedValue:", changedValue)
+              console.log("type of changedValue:", typeof changedValue)
+              console.log("originalValue:", originalValue)
+              console.log("type of originalValue:", typeof originalValue)
               // If the values are different, log the change and mark hasChanges as true
               if (originalValue !== undefined && changedValue !== originalValue) {
+                console.log("Change detected!")
                 hasChanges = true;
               }
             }
