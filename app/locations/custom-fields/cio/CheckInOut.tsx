@@ -63,9 +63,7 @@ const CheckInOut = () => {
         throw new Error("Failed to delete metadata");
       } else {
         // Entry lock metadata was successfully deleted.
-        const entryLockMetadataApiEndpointCallResponseJson =
-          await entryLockMetadataApiEndpointCallResponse.json();
-        console.log(entryLockMetadataApiEndpointCallResponseJson); // Log the response data (e.g., confirmation of deletion)
+        await entryLockMetadataApiEndpointCallResponse.json();
 
         // Delete metadata
         currentMetaDataRef.current = undefined;
@@ -242,14 +240,16 @@ const CheckInOut = () => {
   }, [appSdk, currentUserData]);
 
   const handleChange = async (whatChanged: any) => {
-    console.log("Entry Changed!")
     // Function to compare original/changed entry and return true if they are different
     function compareObjects(changedObject: any, originalObject: any) {
       // Do not compare if either object is undefined or null. This may create a false positive.
       if (changedObject === undefined || originalObject === undefined || changedObject === null || originalObject === null) {
         return false;
       }
+
+      // Boolean to track if changes to the entry are detected.
       let hasChanges = false;
+
       // Function to recursively compare each key
       function compareKeys(changed: any, original: any, parentKey = "") {
         // Loop through the keys in the changed object
@@ -258,7 +258,12 @@ const CheckInOut = () => {
             const changedValue = changed[key];
             const originalValue = original[key];
 
-            // for check change in Tags field
+            // New content (likely a new line) in an RTE field. Ignore "entry_lock" field.
+            if (original[key] === undefined && key !== "entry_lock") {
+              hasChanges = true;
+            }
+
+            // Check if the tags have changed.
             if (key === 'tags' && changed.tags && original.tags) {
               for (let i = 0; i < original.tags.length; i++) {
                 if (original.tags[i] !== changed.tags[i]) {
@@ -288,7 +293,7 @@ const CheckInOut = () => {
         }
       }
 
-      // Start comparing the two objects
+      // Start comparing the original entry vs. the changed entry.
       compareKeys(changedObject, originalObject);
 
       return hasChanges;
