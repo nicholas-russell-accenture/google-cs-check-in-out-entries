@@ -280,7 +280,7 @@ const CheckInOut = () => {
               compareKeys(changedValue, originalValue, fullKey);
             } else {
               // If the values are different, log the change and mark hasChanges as true
-              if (changedValue !== originalValue) {
+              if (originalValue !== undefined && changedValue !== originalValue) {
                 hasChanges = true;
               }
             }
