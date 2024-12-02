@@ -242,10 +242,14 @@ const CheckInOut = () => {
   }, [appSdk, currentUserData]);
 
   const handleChange = async (whatChanged: any) => {
+    console.log("Entry Changed!")
     // Function to compare original/changed entry and return true if they are different
     function compareObjects(changedObject: any, originalObject: any) {
+      // Do not compare if either object is undefined or null. This may create a false positive.
+      if (changedObject === undefined || originalObject === undefined || changedObject === null || originalObject === null) {
+        return false;
+      }
       let hasChanges = false;
-
       // Function to recursively compare each key
       function compareKeys(changed: any, original: any, parentKey = "") {
         // Loop through the keys in the changed object
