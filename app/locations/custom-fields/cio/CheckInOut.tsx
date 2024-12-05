@@ -264,6 +264,8 @@ const CheckInOut = () => {
             // New content (likely a new line) in an RTE field. Ignore "entry_lock" field.
             if (original[key] === undefined && key !== "entry_lock") {
               hasChanges = true;
+              // Temporary debugging.
+              console.log("New Content Detected:", key);
             }
 
             // Check if the tags have changed.
@@ -271,6 +273,8 @@ const CheckInOut = () => {
               for (let i = 0; i < original.tags.length; i++) {
                 if (original.tags[i] !== changed.tags[i]) {
                   hasChanges = true;
+                  // Temporary debugging.
+                  console.log("New Tags Detected:", i);
                 }
               }
             }
@@ -289,6 +293,8 @@ const CheckInOut = () => {
             } else {
               // If the values are different, log the change and mark hasChanges as true
               if (originalValue !== undefined && changedValue !== originalValue) {
+                // Temporary debugging.
+                console.log("New Value:", originalValue, changedValue);
                 hasChanges = true;
               }
             }
