@@ -240,6 +240,9 @@ const CheckInOut = () => {
   }, [appSdk, currentUserData]);
 
   const handleChange = async (whatChanged: any) => {
+    // Temporary debugging.
+    console.log("Change:", whatChanged, "Original", appSdk?.location?.CustomField?.entry?._data);
+
     // Function to compare original/changed entry and return true if they are different
     function compareObjects(changedObject: any, originalObject: any) {
       // Do not compare if either object is undefined or null. This may create a false positive.
