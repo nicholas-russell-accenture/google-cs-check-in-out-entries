@@ -19,6 +19,7 @@ const CheckInOut = () => {
   const [dataLoading, setDataLoading] = React.useState<boolean>(false);
   const [buttonDisabled, setButtonDisabled] = React.useState<boolean>(true);
   const [currentMetaData, setCurrentMetaData] = React.useState<any>(undefined);
+  const [currentEntryMetaData, setCurrentEntryMetaData] = React.useState<any>(undefined);
   const [isUnlockEntryModalOpen, setIsUnlockEntryModalOpen] =
     React.useState(false);
   const [extensionUid, setExtensionUid] = React.useState<string>("");
@@ -29,13 +30,17 @@ const CheckInOut = () => {
 
   // Create a ref to hold the latest currentMetaData
   const currentMetaDataRef = React.useRef(currentMetaData);
+  
+  // Create a ref to hold the latest currentMetaData
+  const currentEntryMetaDataRef = React.useRef(currentEntryMetaData);
 
   // Define Refs for modals
   const lockExpiredModalVisibleRef = React.useRef(false);
   const entryIsLockedModalVisibleRef = React.useRef(false);
   const lastChangeTimestampRef = React.useRef<number | undefined>(undefined);
   const [attemptToLockFailed, setAttemptToLockFailed] = React.useState(false);
-
+  const AutoSaveExtensionUid = "blt69b70d24df0d6c32"
+  
   const deleteMetadata = async (metadataId: string, appToken: string) => {
 
     if (branch === null) {
@@ -77,6 +82,96 @@ const CheckInOut = () => {
     }
   };
 
+  // for save entry inside auto-save extension
+  const saveEntryInMetadata = React.useCallback(async (): Promise<void> => {
+    const entryId: any = appSdk?.location?.CustomField?.entry?._data?.uid;
+    const contentTypeUid: any =
+      appSdk?.location?.CustomField?.entry?.content_type?.uid;
+
+    const currentDate = new Date();
+    const currentTime = currentDate.toLocaleTimeString();
+    const entry: any = appSdk?.location?.CustomField?.entry?._data
+    delete entry._metadata;
+    delete entry._embedded_items;
+
+    if (currentEntryMetaDataRef.current == undefined) {
+      try {
+        const response = await appSdk?.metadata.createMetaData({
+          entity_uid: entryId,
+          type: "entry",
+          _content_type_uid: contentTypeUid,
+          entry: entry,
+          extension_uid: AutoSaveExtensionUid,
+          createdByUserName: currentUserData?.name,
+          currentUserTime: currentTime
+        });
+        if (response) {
+          setCurrentEntryMetaData(response.metadata);
+        } else {
+          console.log("Auto Save meta-data entry creation failed.");
+        }
+      } catch (error) {
+        console.error("Error creating Auto save entry:", error);
+      }
+    }
+  }, [appSdk]);
+
+  const updateEntryInMetadata = React.useCallback(async (): Promise<void> => {
+    if (!appSdk) return; // App SDK is not available.
+
+    // Get the browser's current time.
+    const currentDate = new Date();
+    const currentTime = currentDate.toLocaleTimeString();
+
+    // update whole entry in metadata 
+    try {
+      const entry: any = appSdk?.location?.CustomField?.entry?._data
+      delete entry._metadata;
+      delete entry._embedded_items;
+
+      const response = await appSdk?.metadata.updateMetaData({
+        uid: currentEntryMetaDataRef.current.uid,
+        currentUserTime: currentTime,
+        entry: entry
+      });
+
+      if (response) {
+        setCurrentEntryMetaData(response.metadata);
+      }
+    } catch (error) {
+      console.error("Error updating entry in metadata:", error);
+    }
+
+  }, [appSdk, currentUserData]);
+
+  // useEffect to manage interval and calls
+  React.useEffect(() => {
+    // Function to decide whether to save or update entry in metadata
+    const handleEntryMetadata = () => {
+      if (currentEntryMetaDataRef.current === undefined) {
+        saveEntryInMetadata();
+      } else {
+        updateEntryInMetadata();
+      }
+    };
+  
+    // Call the metadata function immediately on mount
+    handleEntryMetadata();
+  
+    // Set an interval to call the function every 3 minutes (180000 ms)
+    const intervalId = setInterval(() => {
+      handleEntryMetadata();
+    }, 180000);
+  
+    // Cleanup function to clear the interval when the component is unmounted
+    return () => clearInterval(intervalId);
+  }, [appSdk, saveEntryInMetadata, updateEntryInMetadata]);
+  
+  // Effect to update the ref when currentEntryMetaData changes
+  React.useEffect(() => {
+    currentEntryMetaDataRef.current = currentEntryMetaData;
+  }, [currentEntryMetaData]);
+
   // Effect to update the ref when currentMetaData changes
   React.useEffect(() => {
     currentMetaDataRef.current = currentMetaData;
@@ -85,10 +180,12 @@ const CheckInOut = () => {
   // Determine whether or not the entry is locked.
   // If locked, show the modal to request an unlock or return to dashboard.
   React.useEffect(() => {
+    setExtensionUid("bltbce177efe7284a0f")
     const fetchMetadata = async () => {
       try {
         const entityUidToCheck = appSdk?.location.CustomField?.entry._data.uid;
         const resData = await appSdk?.metadata?.retrieveAllMetaData();
+        // for check Entry lock
         const filteredEntry: any = resData?.metadata.filter((item) => {
           return (
             item.entity_uid === entityUidToCheck &&
@@ -98,6 +195,16 @@ const CheckInOut = () => {
         });
 
         setCurrentMetaData(filteredEntry[0]);
+
+        // for check auto save entry
+        const autoSaveFilteredEntry: any = resData?.metadata.filter((item) => {
+          return (
+            item.entity_uid === entityUidToCheck &&
+            item.extension_uid === AutoSaveExtensionUid
+          );
+        })
+        console.log("autoSaveFilteredEntry:-",autoSaveFilteredEntry)
+        setCurrentEntryMetaData(autoSaveFilteredEntry[0]);
 
         const showEntryIsLockedModal = () => {
           setTimeout(() => {
