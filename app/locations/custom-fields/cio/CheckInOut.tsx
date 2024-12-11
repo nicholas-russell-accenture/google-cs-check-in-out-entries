@@ -19,7 +19,7 @@ const CheckInOut = () => {
   const [dataLoading, setDataLoading] = React.useState<boolean>(false);
   const [buttonDisabled, setButtonDisabled] = React.useState<boolean>(true);
   const [currentMetaData, setCurrentMetaData] = React.useState<any>(undefined);
-  const [currentEntryMetaData, setCurrentEntryMetaData] = React.useState<any>(undefined);
+  const [currentAutoSaveEntryMetaData, setCurrentAutoSaveEntryMetaData] = React.useState<any>(undefined);
   const [isUnlockEntryModalOpen, setIsUnlockEntryModalOpen] =
     React.useState(false);
   const [extensionUid, setExtensionUid] = React.useState<string>("");
@@ -32,7 +32,7 @@ const CheckInOut = () => {
   const currentMetaDataRef = React.useRef(currentMetaData);
   
   // Create a ref to hold the latest currentMetaData
-  const currentEntryMetaDataRef = React.useRef(currentEntryMetaData);
+  const currentAutoSaveEntryMetaDataRef = React.useRef(currentAutoSaveEntryMetaData);
 
   // Define Refs for modals
   const lockExpiredModalVisibleRef = React.useRef(false);
@@ -82,95 +82,55 @@ const CheckInOut = () => {
     }
   };
 
-  // for save entry inside auto-save extension
-  const saveEntryInMetadata = React.useCallback(async (): Promise<void> => {
-    const entryId: any = appSdk?.location?.CustomField?.entry?._data?.uid;
-    const contentTypeUid: any =
-      appSdk?.location?.CustomField?.entry?.content_type?.uid;
-
-    const currentDate = new Date();
-    const currentTime = currentDate.toLocaleTimeString();
-    const entry: any = appSdk?.location?.CustomField?.entry?._data
-    delete entry._metadata;
-    delete entry._embedded_items;
-
-    if (currentEntryMetaDataRef.current == undefined) {
-      try {
-        const response = await appSdk?.metadata.createMetaData({
-          entity_uid: entryId,
-          type: "entry",
-          _content_type_uid: contentTypeUid,
-          entry: entry,
-          extension_uid: AutoSaveExtensionUid,
-          createdByUserName: currentUserData?.name,
-          currentUserTime: currentTime
-        });
-        if (response) {
-          setCurrentEntryMetaData(response.metadata);
-        } else {
-          console.log("Auto Save meta-data entry creation failed.");
-        }
-      } catch (error) {
-        console.error("Error creating Auto save entry:", error);
-      }
+  // for delete auto save entry metadata
+  const deleteAutoSaveEntryMetadata = async (metadataId: string) => {
+    if (branch === null) {
+      console.log("Branch value is not available for use in request.");
+      return;
     }
-  }, [appSdk]);
 
-  const updateEntryInMetadata = React.useCallback(async (): Promise<void> => {
-    if (!appSdk) return; // App SDK is not available.
-
-    // Get the browser's current time.
-    const currentDate = new Date();
-    const currentTime = currentDate.toLocaleTimeString();
-
-    // update whole entry in metadata 
     try {
-      const entry: any = appSdk?.location?.CustomField?.entry?._data
-      delete entry._metadata;
-      delete entry._embedded_items;
+      if (appToken) {
+        const autoSaveMetadataApiEndpointCallResponse = await fetch(
+          `/api/contentstack/extension/metadata/delete?app-token=${appToken}&metadataId=${metadataId}&branch=${branch}`,
+          {
+            method: "DELETE", // Set the HTTP method to DELETE
+            headers: {
+              "Content-Type": "application/json", // Optional, if you're sending JSON data
+            },
+          }
+        );
 
-      const response = await appSdk?.metadata.updateMetaData({
-        uid: currentEntryMetaDataRef.current.uid,
-        currentUserTime: currentTime,
-        entry: entry
-      });
+        // Check if the response was successful
+        if (!autoSaveMetadataApiEndpointCallResponse.ok) {
+          console.log(
+            "Failure response:",
+            autoSaveMetadataApiEndpointCallResponse
+          );
+          throw new Error("Failed to delete entry auto save metadata");
+        } else {
+          // Entry lock metadata was successfully deleted.
+          const autoSaveMetadataApiEndpointCallResponseJson =
+            await autoSaveMetadataApiEndpointCallResponse.json();
+          console.log(autoSaveMetadataApiEndpointCallResponseJson); // Log the response data (e.g., confirmation of deletion)
 
-      if (response) {
-        setCurrentEntryMetaData(response.metadata);
+          // Delete metadata
+          currentAutoSaveEntryMetaDataRef.current = undefined;
+          setCurrentAutoSaveEntryMetaData(undefined);
+          return true;
+        }
+      } else {
+        console.log("App Token is not set. Cannot remove entry metadata.");
       }
     } catch (error) {
-      console.error("Error updating entry in metadata:", error);
+      console.error("Error deleting entry auto save metadata:", error);
     }
-
-  }, [appSdk, currentUserData]);
-
-  // useEffect to manage interval and calls
+  };
+  
+  // Effect to update the ref when currentAutoSaveEntryMetaData changes
   React.useEffect(() => {
-    // Function to decide whether to save or update entry in metadata
-    const handleEntryMetadata = () => {
-      if (currentEntryMetaDataRef.current === undefined) {
-        saveEntryInMetadata();
-      } else {
-        updateEntryInMetadata();
-      }
-    };
-  
-    // Call the metadata function immediately on mount
-    handleEntryMetadata();
-  
-    // Set an interval to call the function every 3 minutes (180000 ms)
-    const intervalId = setInterval(() => {
-      handleEntryMetadata();
-    }, 180000);
-  
-    // Cleanup function to clear the interval when the component is unmounted
-    return () => clearInterval(intervalId);
-  }, [appSdk, saveEntryInMetadata, updateEntryInMetadata]);
-  
-  // Effect to update the ref when currentEntryMetaData changes
-  React.useEffect(() => {
-    currentEntryMetaDataRef.current = currentEntryMetaData;
-  }, [currentEntryMetaData]);
+    currentAutoSaveEntryMetaDataRef.current = currentAutoSaveEntryMetaData;
+  }, [currentAutoSaveEntryMetaData]);
 
   // Effect to update the ref when currentMetaData changes
   React.useEffect(() => {
@@ -204,7 +164,7 @@ const CheckInOut = () => {
           );
         })
         console.log("autoSaveFilteredEntry:-",autoSaveFilteredEntry)
-        setCurrentEntryMetaData(autoSaveFilteredEntry[0]);
+        setCurrentAutoSaveEntryMetaData(autoSaveFilteredEntry[0]);
 
         const showEntryIsLockedModal = () => {
           setTimeout(() => {
@@ -241,6 +201,96 @@ const CheckInOut = () => {
 
     fetchMetadata();
   }, [appSdk, currentUserData, contentstackAppDomain, attemptToLockFailed]);
+
+  // for save entry inside auto-save extension
+  const saveEntryInMetadata = React.useCallback(async (): Promise<void> => {
+    const entryId: any = appSdk?.location?.CustomField?.entry?._data?.uid;
+    const contentTypeUid: any =
+      appSdk?.location?.CustomField?.entry?.content_type?.uid;
+
+    const currentDate = new Date();
+    const currentTime = currentDate.toLocaleTimeString();
+    const entry: any = appSdk?.location?.CustomField?.entry?._data
+    delete entry._metadata;
+    delete entry._embedded_items;
+
+    if (currentAutoSaveEntryMetaDataRef.current == undefined) {
+      try {
+        const response = await appSdk?.metadata.createMetaData({
+          entity_uid: entryId,
+          type: "entry",
+          _content_type_uid: contentTypeUid,
+          entry: entry,
+          extension_uid: AutoSaveExtensionUid,
+          createdByUserName: currentUserData?.name,
+          currentUserTime: currentTime,
+          autoDraft: true
+        });
+        if (response) {
+          console.log("save called:",response)
+          setCurrentAutoSaveEntryMetaData(response.metadata);
+        } else {
+          console.log("Auto Save meta-data entry creation failed.");
+        }
+      } catch (error) {
+        console.error("Error creating Auto save entry:", error);
+      }
+    }
+  }, [appSdk]);
+
+  // for update entry inside auto-save extension
+  const updateEntryInMetadata = React.useCallback(async (): Promise<void> => {
+    if (!appSdk) return; // App SDK is not available.
+
+    // Get the browser's current time.
+    const currentDate = new Date();
+    const currentTime = currentDate.toLocaleTimeString();
+
+    // update whole entry in metadata 
+    try {
+      const entry: any = appSdk?.location?.CustomField?.entry?._data
+      delete entry._metadata;
+      delete entry._embedded_items;
+
+      const response = await appSdk?.metadata.updateMetaData({
+        uid: currentAutoSaveEntryMetaDataRef.current.uid,
+        currentUserTime: currentTime,
+        entry: entry
+      });
+
+      if (response) {
+        console.log("update called:",response)
+        setCurrentAutoSaveEntryMetaData(response.metadata);
+      }
+    } catch (error) {
+      console.error("Error updating entry in metadata:", error);
+    }
+
+  }, [appSdk, currentUserData]);
+
+  // useEffect to manage interval and calls for update entry in auto save extension every 3 min
+  React.useEffect(() => {
+    // Function to decide whether to save or update entry in metadata
+    const handleEntryMetadata = () => {
+      console.log("currentAutoSaveEntryMetaDataRef:",currentAutoSaveEntryMetaDataRef)
+      if (currentAutoSaveEntryMetaDataRef.current === undefined) {
+        saveEntryInMetadata();
+      } else {
+        updateEntryInMetadata();
+      }
+    };
+  
+    // Call the metadata function immediately on mount
+    handleEntryMetadata();
+  
+    // Set an interval to call the function every 3 minutes (180000 ms)
+    const intervalId = setInterval(() => {
+      handleEntryMetadata();
+    }, 180000);
+  
+    // Cleanup function to clear the interval when the component is unmounted
+    return () => clearInterval(intervalId);
+  }, [appSdk, saveEntryInMetadata, updateEntryInMetadata]);
 
   // Unlocks the entry.
   const unLockEntry = React.useCallback(async (): Promise<void> => {
@@ -575,8 +625,9 @@ const CheckInOut = () => {
       const entry = appSdk?.location?.CustomField?.entry;
       if (!entry) return;
 
-      entry.onSave(() => {
-        unLockEntry();
+      entry.onSave(async() => {
+        await unLockEntry();
+        await deleteAutoSaveEntryMetadata(currentAutoSaveEntryMetaDataRef.current.uid);
       });
     } catch (error) {
       console.error("Error saving entry:", error);
