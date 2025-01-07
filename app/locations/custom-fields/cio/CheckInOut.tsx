@@ -284,7 +284,7 @@ const CheckInOut = () => {
 
     // Function to decide whether to save or update entry in metadata
     const handleEntryMetadata = () => {
-      if(currentMetaDataRef?.current?.EntryLocked) {
+      if(currentMetaDataRef?.current && currentMetaDataRef?.current?.EntryLocked && currentMetaDataRef.current?.created_by === currentUserData?.uid) {
         if (currentAutoSaveEntryMetaDataRef.current === undefined) {
           saveEntryInMetadata();
         } else {
@@ -294,14 +294,14 @@ const CheckInOut = () => {
     };
   
     // Call the metadata function immediately on mount
-    setTimeout(() => {
-      handleEntryMetadata();
-    }, 0);
+    // setTimeout(() => {
+    //   handleEntryMetadata();
+    // }, 0);
   
-    // Set an interval to call the function every 3 minutes (180000 ms)
+    // Set an interval to call the function every 10 minutes (600000 ms)
     const intervalId = setInterval(() => {
       handleEntryMetadata();
-    }, 180000);
+    }, 600000);
   
     // Cleanup function to clear the interval when the component is unmounted
     return () => clearInterval(intervalId);
@@ -527,12 +527,6 @@ const CheckInOut = () => {
           );
           const currentTime: any = new Date();
           const timeDifference: any = currentTime - lastUpdateAtTime;
-
-          // Save metadata before 10 min of inactivity 
-          if (timeDifference > 10 * 60 * 1000 - 1000 && !isSave) {
-            setIsSave(true);
-            updateEntryInMetadata();
-          }
 
           // Check if the time difference is more than 15 minutes (15 * 60 * 1000 milliseconds)
           if (timeDifference > 15 * 60 * 1000 - 1000) {
