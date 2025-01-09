@@ -27,7 +27,7 @@ const CheckInOut = () => {
     React.useState<string>("");
 
   const [isReady, setIsReady] = React.useState(false);
-  const [isSave, setIsSave] = React.useState(false);
+  const [isDraftInActive, setIsDraftInActive] = React.useState(false);
 
   // Create a ref to hold the latest currentMetaData
   const currentMetaDataRef = React.useRef(currentMetaData);
@@ -279,12 +279,12 @@ const CheckInOut = () => {
 
   }, [appSdk, currentUserData]);
 
-  // useEffect to manage interval and calls for update entry in auto save extension every 3 min
+  // useEffect to manage interval and calls for update entry in auto save extension 
   React.useEffect(() => {
-
     // Function to decide whether to save or update entry in metadata
     const handleEntryMetadata = () => {
-      if(currentMetaDataRef?.current && currentMetaDataRef?.current?.EntryLocked && currentMetaDataRef.current?.created_by === currentUserData?.uid) {
+      if(currentMetaDataRef?.current && currentMetaDataRef?.current?.EntryLocked && currentMetaDataRef.current?.created_by === currentUserData?.uid && !isDraftInActive) {
+        setIsDraftInActive(true)
         if (currentAutoSaveEntryMetaDataRef.current === undefined) {
           saveEntryInMetadata();
         } else {
@@ -293,19 +293,25 @@ const CheckInOut = () => {
       }
     };
   
-    // Call the metadata function immediately on mount
-    // setTimeout(() => {
-    //   handleEntryMetadata();
-    // }, 0);
-  
-    // Set an interval to call the function every 10 minutes (600000 ms)
+    // Set an interval to check 10 minutes of inactivity
     const intervalId = setInterval(() => {
-      handleEntryMetadata();
-    }, 600000);
-  
+      const lastUpdateAtTime: any = new Date(
+        currentMetaDataRef.current.updated_at
+      );
+      const currentTime: any = new Date();
+      const timeDifference: any = currentTime - lastUpdateAtTime;
+      if (timeDifference > 10 * 60 * 1000 - 1000) {
+        if (!isDraftInActive) {
+          handleEntryMetadata();
+        }
+        setIsDraftInActive(true)
+      }
+      return (() => clearInterval(intervalId))  
+    }, 60000);
+
     // Cleanup function to clear the interval when the component is unmounted
     return () => clearInterval(intervalId);
-  }, [saveEntryInMetadata,updateEntryInMetadata]);
+  }, [saveEntryInMetadata,updateEntryInMetadata,isDraftInActive]);
 
   // Unlocks the entry.
   const unLockEntry = React.useCallback(async (): Promise<void> => {
@@ -415,6 +421,7 @@ const CheckInOut = () => {
 
   const handleChange = async (whatChanged: any) => {
     console.log("Entry Changed!")
+    setIsDraftInActive(false);
     // Function to compare original/changed entry and return true if they are different
     function compareObjects(changedObject: any, originalObject: any) {
       // Do not compare if either object is undefined or null. This may create a false positive.
@@ -574,7 +581,7 @@ const CheckInOut = () => {
 
     // Current user has not locked the entry.
     return () => false;
-  }, [appSdk, currentMetaData, currentUserData, currentMetaDataRef.current,isSave]);
+  }, [appSdk, currentMetaData, currentUserData, currentMetaDataRef.current]);
 
   // Handle onChange event
   React.useEffect(() => {
