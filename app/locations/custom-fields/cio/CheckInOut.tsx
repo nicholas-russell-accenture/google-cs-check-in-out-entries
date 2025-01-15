@@ -19,7 +19,8 @@ const CheckInOut = () => {
   const [dataLoading, setDataLoading] = React.useState<boolean>(false);
   const [buttonDisabled, setButtonDisabled] = React.useState<boolean>(true);
   const [currentMetaData, setCurrentMetaData] = React.useState<any>(undefined);
-  const [currentAutoSaveEntryMetaData, setCurrentAutoSaveEntryMetaData] = React.useState<any>(undefined);
+  const [currentAutoSaveEntryMetaData, setCurrentAutoSaveEntryMetaData] =
+    React.useState<any>(undefined);
   const [isUnlockEntryModalOpen, setIsUnlockEntryModalOpen] =
     React.useState(false);
   const [extensionUid, setExtensionUid] = React.useState<string>("");
@@ -31,7 +32,7 @@ const CheckInOut = () => {
 
   // Create a ref to hold the latest currentMetaData
   const currentMetaDataRef = React.useRef(currentMetaData);
-  
+
   // Create a ref to hold the latest currenAutoSaveEntrytMetaData
   const currentAutoSaveEntryMetaDataRef = React.useRef<any>(undefined);
 
@@ -40,12 +41,13 @@ const CheckInOut = () => {
   const entryIsLockedModalVisibleRef = React.useRef(false);
   const lastChangeTimestampRef = React.useRef<number | undefined>(undefined);
   const [attemptToLockFailed, setAttemptToLockFailed] = React.useState(false);
-  const AutoSaveExtensionUid = "blt69b70d24df0d6c32"
-  
-  const deleteMetadata = async (metadataId: string, appToken: string) => {
+  const AutoSaveExtensionUid = "blt69b70d24df0d6c32";
 
+  const deleteMetadata = async (metadataId: string, appToken: string) => {
     if (branch === null) {
-      console.log("Unlock attempt failed: branch value is not available for use in request.");
+      console.log(
+        "Unlock attempt failed: branch value is not available for use in request."
+      );
       return;
     }
 
@@ -158,7 +160,7 @@ const CheckInOut = () => {
             item.entity_uid === entityUidToCheck &&
             item.extension_uid === AutoSaveExtensionUid
           );
-        })
+        });
         setCurrentAutoSaveEntryMetaData(autoSaveFilteredEntry[0]);
 
         const showEntryIsLockedModal = () => {
@@ -199,7 +201,7 @@ const CheckInOut = () => {
 
   // Effect to update the ref when currentAutoSaveEntryMetaData changes
   React.useEffect(() => {
-    if(currentAutoSaveEntryMetaData !== undefined) {
+    if (currentAutoSaveEntryMetaData !== undefined) {
       currentAutoSaveEntryMetaDataRef.current = currentAutoSaveEntryMetaData;
     }
   }, [currentAutoSaveEntryMetaData]);
@@ -212,9 +214,10 @@ const CheckInOut = () => {
 
     const currentDate = new Date();
     const currentTime = currentDate.toLocaleTimeString();
-    const entry: any = appSdk?.location?.CustomField?.entry?._changedData
+    const entry: any = appSdk?.location?.CustomField?.entry?._changedData;
     if (entry) {
-      entry._version = appSdk?.location?.CustomField?.entry?._data?._version || 1
+      entry._version =
+        appSdk?.location?.CustomField?.entry?._data?._version || 1;
       delete entry._metadata;
       delete entry._embedded_items;
 
@@ -228,16 +231,16 @@ const CheckInOut = () => {
             extension_uid: AutoSaveExtensionUid,
             userName: currentUserData?.name,
             currentUserTime: currentTime,
-            autoDraft: true
+            autoDraft: true,
           });
           if (response) {
-            console.log("save called:", response)
+            console.log("Initial save entry draft to metadata called:", response);
             setCurrentAutoSaveEntryMetaData(response.metadata);
           } else {
-            console.log("Auto Save meta-data entry creation failed.");
+            console.log("Initial save entry draft to metadata failed.");
           }
         } catch (error) {
-          console.error("Error creating Auto save entry:", error);
+          console.error("Error creating initial metadata saved version of entry:", error);
         }
       }
     }
@@ -251,11 +254,12 @@ const CheckInOut = () => {
     const currentDate = new Date();
     const currentTime = currentDate.toLocaleTimeString();
 
-    // update whole entry in metadata 
+    // update whole entry in metadata
     try {
-      const entry: any = appSdk?.location?.CustomField?.entry?._changedData
+      const entry: any = appSdk?.location?.CustomField?.entry?._changedData;
       if (entry) {
-        entry._version = appSdk?.location?.CustomField?.entry?._data?._version || 1
+        entry._version =
+          appSdk?.location?.CustomField?.entry?._data?._version || 1;
         delete entry._metadata;
         delete entry._embedded_items;
 
@@ -267,24 +271,27 @@ const CheckInOut = () => {
         });
 
         if (response) {
-          console.log("update called:", response)
+          console.log("Update of save entry draft to metadata called:", response);
           setCurrentAutoSaveEntryMetaData(response.metadata);
         } else {
-          console.log("Auto Save meta-data entry updation failed.");
+          console.log("Update of saved entry draft in metadata failed.");
         }
       }
     } catch (error) {
-      console.error("Error updating entry in metadata:", error);
+      console.error("Error updating saved entry draft in metadata:", error);
     }
-
   }, [appSdk, currentUserData]);
 
-  // useEffect to manage interval and calls for update entry in auto save extension 
+  // useEffect to manage interval and calls for update entry in auto save extension
   React.useEffect(() => {
     // Function to decide whether to save or update entry in metadata
     const handleEntryMetadata = () => {
-      if(currentMetaDataRef?.current && currentMetaDataRef?.current?.EntryLocked && currentMetaDataRef.current?.created_by === currentUserData?.uid && !isDraftInActive) {
-        setIsDraftInActive(true)
+      if (
+        currentMetaDataRef?.current &&
+        currentMetaDataRef?.current?.EntryLocked &&
+        currentMetaDataRef.current?.created_by === currentUserData?.uid &&
+        !isDraftInActive
+      ) {
         if (currentAutoSaveEntryMetaDataRef.current === undefined) {
           saveEntryInMetadata();
         } else {
@@ -292,26 +299,34 @@ const CheckInOut = () => {
         }
       }
     };
-  
+
     // Set an interval to check 10 minutes of inactivity
-    const intervalId = setInterval(() => {
-      const lastUpdateAtTime: any = new Date(
-        currentMetaDataRef.current.updated_at
-      );
-      const currentTime: any = new Date();
-      const timeDifference: any = currentTime - lastUpdateAtTime;
-      if (timeDifference > 10 * 60 * 1000 - 1000) {
-        if (!isDraftInActive) {
-          handleEntryMetadata();
+    const checkFor10MinutesOfInactivityInterval = setInterval(() => {
+      if (lastChangeTimestampRef.current !== undefined) {
+        const now = new Date().getTime();
+        if (now - lastChangeTimestampRef.current > 5000) {
+          console.log(
+            "It's been",
+            (now - lastChangeTimestampRef.current) / 1000,
+            " seconds since the last update time"
+          );
         }
-        setIsDraftInActive(true)
+        const numberOfSecondsSinceLastChange =
+          (now - lastChangeTimestampRef.current) / 1000;
+
+        if (numberOfSecondsSinceLastChange >= 600) {
+          if (!isDraftInActive) {
+            handleEntryMetadata();
+          }
+          setIsDraftInActive(true);
+        }
       }
-      return (() => clearInterval(intervalId))  
-    }, 60000);
+      return () => clearInterval(checkFor10MinutesOfInactivityInterval);
+    }, 5000);
 
     // Cleanup function to clear the interval when the component is unmounted
-    return () => clearInterval(intervalId);
-  }, [saveEntryInMetadata,updateEntryInMetadata,isDraftInActive]);
+    return () => clearInterval(checkFor10MinutesOfInactivityInterval);
+  }, [saveEntryInMetadata, updateEntryInMetadata, isDraftInActive]);
 
   // Unlocks the entry.
   const unLockEntry = React.useCallback(async (): Promise<void> => {
@@ -367,8 +382,9 @@ const CheckInOut = () => {
     // Get the browser's current time.
     const currentDate = new Date();
     const currentTime = currentDate.toLocaleTimeString();
-    if (currentMetaDataRef.current == undefined) {
+    if (currentMetaDataRef.current == undefined && entryId !== undefined) {
       try {
+        console.log("Attempt to lock thge entry.");
         const response = await appSdk?.metadata.createMetaData({
           entity_uid: entryId,
           type: "entry",
@@ -379,7 +395,8 @@ const CheckInOut = () => {
           currentUserTime: currentTime,
         });
 
-        if (response) {
+        if (response && response?.metadata?.EntryLocked) {
+          console.log("Entry is locked.", response);
           setCurrentMetaData(response.metadata);
         } else {
           console.log("Entry lock meta-data entry creation failed.");
@@ -420,12 +437,16 @@ const CheckInOut = () => {
   }, [appSdk, currentUserData]);
 
   const handleChange = async (whatChanged: any) => {
-    console.log("Entry Changed!")
     setIsDraftInActive(false);
     // Function to compare original/changed entry and return true if they are different
     function compareObjects(changedObject: any, originalObject: any) {
       // Do not compare if either object is undefined or null. This may create a false positive.
-      if (changedObject === undefined || originalObject === undefined || changedObject === null || originalObject === null) {
+      if (
+        changedObject === undefined ||
+        originalObject === undefined ||
+        changedObject === null ||
+        originalObject === null
+      ) {
         return false;
       }
       let hasChanges = false;
@@ -438,7 +459,7 @@ const CheckInOut = () => {
             const originalValue = original[key];
 
             // for check change in Tags field
-            if (key === 'tags' && changed.tags && original.tags) {
+            if (key === "tags" && changed.tags && original.tags) {
               for (let i = 0; i < original.tags.length; i++) {
                 if (original.tags[i] !== changed.tags[i]) {
                   hasChanges = true;
@@ -509,7 +530,6 @@ const CheckInOut = () => {
         compareObjects(whatChanged, appSdk?.location?.CustomField?.entry?._data)
       ) {
         await createEntryLock();
-        console.log("Locking Entry.");
         lastChangeTimestampRef.current = currentTimestamp;
         console.log(
           "Updating last changed timestamp.",
@@ -647,9 +667,11 @@ const CheckInOut = () => {
       const entry = appSdk?.location?.CustomField?.entry;
       if (!entry) return;
 
-      entry.onSave(async() => {
+      entry.onSave(async () => {
         await unLockEntry();
-        await deleteAutoSaveEntryMetadata(currentAutoSaveEntryMetaDataRef.current.uid);
+        await deleteAutoSaveEntryMetadata(
+          currentAutoSaveEntryMetaDataRef.current.uid
+        );
       });
     } catch (error) {
       console.error("Error saving entry:", error);
