@@ -41,7 +41,10 @@ const CheckInOut = () => {
   const entryIsLockedModalVisibleRef = React.useRef(false);
   const lastChangeTimestampRef = React.useRef<number | undefined>(undefined);
   const [attemptToLockFailed, setAttemptToLockFailed] = React.useState(false);
-  const AutoSaveExtensionUid = "blt69b70d24df0d6c32";
+  const AutoSaveExtensionUid = process.env
+    .NEXT_PUBLIC_CONTENTSTACK_AUTOSAVE_EXTENSION_UID
+    ? process.env.NEXT_PUBLIC_CONTENTSTACK_AUTOSAVE_EXTENSION_UID
+    : "";
 
   const deleteMetadata = async (metadataId: string, appToken: string) => {
     if (branch === null) {
@@ -234,13 +237,19 @@ const CheckInOut = () => {
             autoDraft: true,
           });
           if (response) {
-            console.log("Initial save entry draft to metadata called:", response);
+            console.log(
+              "Initial save entry draft to metadata called:",
+              response
+            );
             setCurrentAutoSaveEntryMetaData(response.metadata);
           } else {
             console.log("Initial save entry draft to metadata failed.");
           }
         } catch (error) {
-          console.error("Error creating initial metadata saved version of entry:", error);
+          console.error(
+            "Error creating initial metadata saved version of entry:",
+            error
+          );
         }
       }
     }
@@ -271,7 +280,10 @@ const CheckInOut = () => {
         });
 
         if (response) {
-          console.log("Update of save entry draft to metadata called:", response);
+          console.log(
+            "Update of save entry draft to metadata called:",
+            response
+          );
           setCurrentAutoSaveEntryMetaData(response.metadata);
         } else {
           console.log("Update of saved entry draft in metadata failed.");
