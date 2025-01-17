@@ -11,6 +11,8 @@ import ShowModal from "./ShowModal";
 import UnlockEntryModal from "@/app/components/UnlockEntryModal";
 import LockExpiredModal from "@/app/components/LockExpiredModal";
 
+const autoSaveExtensionUid:any = process.env.NEXT_PUBLIC_CONTENTSTACK_AUTOSAVE_EXTENSION_UID;
+
 const CheckInOut = () => {
   const appSdk = useAppSdk();
   const { fieldData, currentUserData } = useCheckOutData();
@@ -40,7 +42,6 @@ const CheckInOut = () => {
   const entryIsLockedModalVisibleRef = React.useRef(false);
   const lastChangeTimestampRef = React.useRef<number | undefined>(undefined);
   const [attemptToLockFailed, setAttemptToLockFailed] = React.useState(false);
-  const AutoSaveExtensionUid = "blt69b70d24df0d6c32"
   
   const deleteMetadata = async (metadataId: string, appToken: string) => {
 
@@ -136,7 +137,6 @@ const CheckInOut = () => {
   // Determine whether or not the entry is locked.
   // If locked, show the modal to request an unlock or return to dashboard.
   React.useEffect(() => {
-    // setExtensionUid("bltbce177efe7284a0f") // use this for run locally
     const fetchMetadata = async () => {
       try {
         const entityUidToCheck = appSdk?.location.CustomField?.entry._data.uid;
@@ -156,7 +156,7 @@ const CheckInOut = () => {
         const autoSaveFilteredEntry: any = resData?.metadata.filter((item) => {
           return (
             item.entity_uid === entityUidToCheck &&
-            item.extension_uid === AutoSaveExtensionUid
+            item.extension_uid === autoSaveExtensionUid
           );
         })
         setCurrentAutoSaveEntryMetaData(autoSaveFilteredEntry[0]);
@@ -225,7 +225,7 @@ const CheckInOut = () => {
             type: "entry",
             _content_type_uid: contentTypeUid,
             entry: entry,
-            extension_uid: AutoSaveExtensionUid,
+            extension_uid: autoSaveExtensionUid,
             userName: currentUserData?.name,
             currentUserTime: currentTime,
             autoDraft: true
@@ -295,18 +295,20 @@ const CheckInOut = () => {
   
     // Set an interval to check 10 minutes of inactivity
     const intervalId = setInterval(() => {
-      const lastUpdateAtTime: any = new Date(
-        currentMetaDataRef.current.updated_at
-      );
-      const currentTime: any = new Date();
-      const timeDifference: any = currentTime - lastUpdateAtTime;
-      if (timeDifference > 10 * 60 * 1000 - 1000) {
-        if (!isDraftInActive) {
-          handleEntryMetadata();
+      if (appSdk && currentMetaDataRef.current) {
+        const lastUpdateAtTime: any = new Date(
+          currentMetaDataRef.current.updated_at
+        );
+        const currentTime: any = new Date();
+        const timeDifference: any = currentTime - lastUpdateAtTime;
+        if (timeDifference > 10 * 60 * 1000 - 1000) {
+          if (!isDraftInActive) {
+            handleEntryMetadata();
+          }
+          setIsDraftInActive(true)
         }
-        setIsDraftInActive(true)
       }
-      return (() => clearInterval(intervalId))  
+      return (() => clearInterval(intervalId))
     }, 60000);
 
     // Cleanup function to clear the interval when the component is unmounted
