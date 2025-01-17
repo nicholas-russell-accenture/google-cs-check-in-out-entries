@@ -740,7 +740,7 @@ const CheckInOut = () => {
     entryLockMessage = "Entry is locked.";
     if (currentMetaData?.updated_by === currentUserData.uid) {
       entryLockMessage =
-        "Entry locked. Save changes before unlocking or going inactive to prevent data loss.";
+        "Entry locked. Save changes before unlocking or going inactive to prevent data loss, or check your available Drafts saved for restoring.";
     }
     entryIsLocked = true;
   }
