@@ -10,7 +10,6 @@ import RequestUnlockModal from "@/app/components/RequestUnlockModal";
 import ShowModal from "./ShowModal";
 import UnlockEntryModal from "@/app/components/UnlockEntryModal";
 import LockExpiredModal from "@/app/components/LockExpiredModal";
-import { IMetadata } from "@contentstack/app-sdk/dist/src/metadata";
 
 const CheckInOut = () => {
   const appSdk = useAppSdk();
@@ -283,8 +282,6 @@ const CheckInOut = () => {
     ): Promise<void> => {
       if (!appSdk) return; // App SDK is not available.
       const entryId: any = appSdk?.location?.CustomField?.entry?._data?.uid;
-      const contentTypeUid: any =
-        appSdk?.location?.CustomField?.entry?._data?.con;
       const AutoSaveExtensionUid = process.env
         .NEXT_PUBLIC_CONTENTSTACK_AUTOSAVE_EXTENSION_UID
         ? process.env.NEXT_PUBLIC_CONTENTSTACK_AUTOSAVE_EXTENSION_UID

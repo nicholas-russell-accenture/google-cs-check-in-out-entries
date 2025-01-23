@@ -36,7 +36,6 @@ export async function GET(req: Request) {
     ) as JwtPayload;
 
     // Now you can safely access the decoded token's properties
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const {
       app_uid,
       installation_uid,
@@ -46,7 +45,7 @@ export async function GET(req: Request) {
     } = decodedToken;
 
     console.log("Decoded Token", decodedToken);
-    console.info("App token is valid!");
+    console.info(app_uid, " ", installation_uid, " ", organization_uid, " ", user_uid, " ", stack_api_key);
 
     // Set the appTokenIsValid flag to true if the token is valid
     appTokenIsValid = true;
@@ -76,8 +75,7 @@ export async function GET(req: Request) {
 
         // Extract the draftEntry from the request body
         try {
-          //let entryUidToQuery = url.searchParams.get("entry-uid");
-          let entryUidToQuery = "Test";
+          const entryUidToQuery = "Test";
           
           // Get the API URL
           const apiUrl = `${mgmtApiDomain}/v3/content_types/draft/entries?locale=en-us&query={"entry_uid":"${entryUidToQuery}"}`;
