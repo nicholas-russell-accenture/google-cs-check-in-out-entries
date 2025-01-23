@@ -36,6 +36,7 @@ export async function GET(req: Request) {
     ) as JwtPayload;
 
     // Now you can safely access the decoded token's properties
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const {
       app_uid,
       installation_uid,
