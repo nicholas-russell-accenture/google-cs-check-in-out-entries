@@ -224,7 +224,7 @@ const CheckInOut = () => {
         try {
           // Send the POST request with the draftEntry object as the payload
           const response = await fetch(
-            apiUrl + "?app-token=" + appToken + "&branch=main",
+            apiUrl + "?app-token=" + appToken + "&branch=gintegration",
             {
               method: "POST",
               headers: {
