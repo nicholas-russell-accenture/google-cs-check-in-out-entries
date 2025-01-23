@@ -10,6 +10,7 @@ import RequestUnlockModal from "@/app/components/RequestUnlockModal";
 import ShowModal from "./ShowModal";
 import UnlockEntryModal from "@/app/components/UnlockEntryModal";
 import LockExpiredModal from "@/app/components/LockExpiredModal";
+import { IMetadata } from "@contentstack/app-sdk/dist/src/metadata";
 
 const CheckInOut = () => {
   const appSdk = useAppSdk();
@@ -41,10 +42,6 @@ const CheckInOut = () => {
   const entryIsLockedModalVisibleRef = React.useRef(false);
   const lastChangeTimestampRef = React.useRef<number | undefined>(undefined);
   const [attemptToLockFailed, setAttemptToLockFailed] = React.useState(false);
-  const AutoSaveExtensionUid = process.env
-    .NEXT_PUBLIC_CONTENTSTACK_AUTOSAVE_EXTENSION_UID
-    ? process.env.NEXT_PUBLIC_CONTENTSTACK_AUTOSAVE_EXTENSION_UID
-    : "";
 
   const deleteMetadata = async (metadataId: string, appToken: string) => {
     if (branch === null) {
@@ -157,15 +154,6 @@ const CheckInOut = () => {
 
         setCurrentMetaData(filteredEntry[0]);
 
-        // for check auto save entry
-        const autoSaveFilteredEntry: any = resData?.metadata.filter((item) => {
-          return (
-            item.entity_uid === entityUidToCheck &&
-            item.extension_uid === AutoSaveExtensionUid
-          );
-        });
-        setCurrentAutoSaveEntryMetaData(autoSaveFilteredEntry[0]);
-
         const showEntryIsLockedModal = () => {
           setTimeout(() => {
             cbModal({
@@ -210,135 +198,206 @@ const CheckInOut = () => {
   }, [currentAutoSaveEntryMetaData]);
 
   // for save entry inside auto-save extension
-  const saveEntryInMetadata = React.useCallback(async (): Promise<void> => {
-    const entryId: any = appSdk?.location?.CustomField?.entry?._data?.uid;
-    const contentTypeUid: any =
-      appSdk?.location?.CustomField?.entry?.content_type?.uid;
+  const saveEntryInMetadata = React.useCallback(
+    async (appToken: string): Promise<void> => {
+      console.log("Attempt to save entry draft.");
 
-    const currentDate = new Date();
-    const currentTime = currentDate.toLocaleTimeString();
-    const entry: any = appSdk?.location?.CustomField?.entry?._changedData;
-    if (entry) {
-      entry._version =
-        appSdk?.location?.CustomField?.entry?._data?._version || 1;
-      delete entry._metadata;
-      delete entry._embedded_items;
+      // Info about the entry and content type.
+      const entryId: any = appSdk?.location?.CustomField?.entry?._data?.uid;
+      const contentTypeUid: any =
+        appSdk?.location?.CustomField?.entry?.content_type?.uid;
+      const currentDate = new Date();
+      const currentTime = currentDate.toLocaleTimeString();
+      const copyOfChangedEntry: any =
+        appSdk?.location?.CustomField?.entry?._changedData;
+      console.log(copyOfChangedEntry);
 
-      if (currentAutoSaveEntryMetaDataRef.current === undefined) {
+      if (copyOfChangedEntry) {
+        copyOfChangedEntry._version =
+          appSdk?.location?.CustomField?.entry?._data?._version || 1;
+        delete copyOfChangedEntry._metadata;
+        delete copyOfChangedEntry._embedded_items;
+
+        // if (currentAutoSaveEntryMetaDataRef.current === undefined) {
+        // Define the API endpoint
+        const apiUrl = "/api/contentstack/draft_entry";
+
         try {
-          const response = await appSdk?.metadata.createMetaData({
-            entity_uid: entryId,
-            type: "entry",
-            _content_type_uid: contentTypeUid,
-            entry: entry,
-            extension_uid: AutoSaveExtensionUid,
-            userName: currentUserData?.name,
-            currentUserTime: currentTime,
-            autoDraft: true,
-          });
-          if (response) {
-            console.log(
-              "Initial save entry draft to metadata called:",
-              response
-            );
-            setCurrentAutoSaveEntryMetaData(response.metadata);
+          // Send the POST request with the draftEntry object as the payload
+          const response = await fetch(
+            apiUrl + "?app-token=" + appToken + "&branch=main",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json", // Ensure the server knows it's JSON
+              },
+              body: JSON.stringify({
+                draftEntry: {
+                  title: `Draft: ${contentTypeUid}: ${copyOfChangedEntry.uid}: ${currentTime}`,
+                  entry_object: JSON.stringify({
+                    draftEntry: {
+                      entity_uid: entryId,
+                      _content_type_uid: contentTypeUid,
+                      entry: JSON.stringify(copyOfChangedEntry),
+                      userName: currentUserData?.name,
+                      currentUserTime: currentTime,
+                    },
+                  }),
+                  entry_uid: entryId,
+                  user_uid: currentUserData?.uid,
+                },
+              }),
+            }
+          );
+
+          // Handle the response
+          if (response.ok) {
+            // Parse the response JSON
+            const data = await response.json();
+            const draftEntryUid = data?.result?.entry?.uid;
+            const draftEntryCreatedAt = data?.result?.entry?.created_at;
+            if (draftEntryUid) {
+              addDraftInfoToMetadata(draftEntryUid, draftEntryCreatedAt);
+            }
+            return data; // Return the response data
           } else {
-            console.log("Initial save entry draft to metadata failed.");
+            // Handle errors, if any
+            const errorData = await response.json();
+            console.error("Failed to post draft entry:", errorData);
+            throw new Error(errorData.error || "Failed to post draft entry");
           }
         } catch (error) {
-          console.error(
-            "Error creating initial metadata saved version of entry:",
-            error
-          );
+          console.error("Error posting draft entry:", error);
+          throw new Error("An error occurred while posting the draft entry.");
         }
       }
-    }
-  }, [appSdk, currentUserData]);
+    },
+    [appSdk, currentUserData]
+  );
 
   // for update entry inside auto-save extension
-  const updateEntryInMetadata = React.useCallback(async (): Promise<void> => {
-    if (!appSdk) return; // App SDK is not available.
+  const addDraftInfoToMetadata = React.useCallback(
+    async (
+      draftEntryUid: string,
+      draftEntryCreatedAt: string
+    ): Promise<void> => {
+      if (!appSdk) return; // App SDK is not available.
+      const entryId: any = appSdk?.location?.CustomField?.entry?._data?.uid;
+      const contentTypeUid: any =
+        appSdk?.location?.CustomField?.entry?._data?.con;
+      const AutoSaveExtensionUid = process.env
+        .NEXT_PUBLIC_CONTENTSTACK_AUTOSAVE_EXTENSION_UID
+        ? process.env.NEXT_PUBLIC_CONTENTSTACK_AUTOSAVE_EXTENSION_UID
+        : "";
 
-    // Get the browser's current time.
-    const currentDate = new Date();
-    const currentTime = currentDate.toLocaleTimeString();
-
-    // update whole entry in metadata
-    try {
-      const entry: any = appSdk?.location?.CustomField?.entry?._changedData;
-      if (entry) {
-        entry._version =
-          appSdk?.location?.CustomField?.entry?._data?._version || 1;
-        delete entry._metadata;
-        delete entry._embedded_items;
-
-        const response = await appSdk?.metadata.updateMetaData({
-          uid: currentAutoSaveEntryMetaDataRef.current.uid,
-          currentUserTime: currentTime,
-          entry: entry,
-          userName: currentUserData?.name,
+      // First, find if metadata item already exists:
+      const allRetrievedMetadata =
+        await appSdk?.metadata?.retrieveAllMetaData();
+      const draftMetadataForCurrentEntry: any =
+        allRetrievedMetadata?.metadata.filter((item) => {
+          return (
+            item.entity_uid === entryId &&
+            item.extension_uid === AutoSaveExtensionUid
+          );
         });
 
-        if (response) {
-          console.log(
-            "Update of save entry draft to metadata called:",
-            response
-          );
-          setCurrentAutoSaveEntryMetaData(response.metadata);
-        } else {
-          console.log("Update of saved entry draft in metadata failed.");
+      if (draftMetadataForCurrentEntry.length > 0) {
+        console.log("Attempt to update metadata", draftMetadataForCurrentEntry);
+        setCurrentAutoSaveEntryMetaData(draftMetadataForCurrentEntry);
+        if (draftMetadataForCurrentEntry?.[0]?.drafts) {
+          draftMetadataForCurrentEntry[0].drafts.push({
+            draft_entry_uid: draftEntryUid,
+            draft_entry_created_at: draftEntryCreatedAt,
+            draft_entry_created_by_uid: currentUserData?.uid,
+          }); // Pushes to an existing drafts array.
+        }
+        const updateAvailableDraftsMetadataResponse =
+          await appSdk?.metadata.updateMetaData({
+            uid: draftMetadataForCurrentEntry[0].uid,
+            testAddingProperty: undefined, // Cleanup
+            autoDraft: undefined, // Cleanup
+            currentUserTime: undefined, // Cleanup
+            deleted_at: undefined, // Cleanup
+            updated_at: undefined, // Cleanup
+            updated_by: undefined, // Cleanup
+            userName: undefined, // Cleanup
+            entry: undefined, // Cleanup
+            drafts: draftMetadataForCurrentEntry?.[0]?.drafts
+              ? draftMetadataForCurrentEntry[0].drafts
+              : [
+                  {
+                    draft_entry_uid: draftEntryUid,
+                    draft_entry_created_at: draftEntryCreatedAt,
+                    draft_entry_created_by_uid: currentUserData?.uid,
+                  },
+                ], // Creates a new single draft.
+          });
+        console.log(
+          "Update available drafts metadata response:",
+          updateAvailableDraftsMetadataResponse
+        );
+      } else {
+        // Create new metadata item to track this entry's drafts
+        console.log("Attempt to create metadata.");
+        if (
+          appSdk?.location?.CustomField?.entry?.content_type?.uid !==
+            undefined &&
+          entryId !== undefined
+        ) {
+          const newMetadataResponse = await appSdk?.metadata.createMetaData({
+            type: "entry",
+            extension_uid: AutoSaveExtensionUid,
+            _content_type_uid:
+              appSdk?.location?.CustomField?.entry?.content_type?.uid,
+            entity_uid: entryId,
+            drafts: [
+              {
+                draft_entry_uid: draftEntryUid,
+                draft_entry_created_at: draftEntryCreatedAt,
+                draft_entry_created_by_uid: currentUserData?.uid,
+              },
+            ],
+          });
+          console.log("New metadata response:", newMetadataResponse);
         }
       }
-    } catch (error) {
-      console.error("Error updating saved entry draft in metadata:", error);
-    }
-  }, [appSdk, currentUserData]);
+    },
+    [appSdk, currentUserData]
+  );
 
   // useEffect to manage interval and calls for update entry in auto save extension
   React.useEffect(() => {
-    // Function to decide whether to save or update entry in metadata
-    const handleEntryMetadata = () => {
-      if (
-        currentMetaDataRef?.current &&
-        currentMetaDataRef?.current?.EntryLocked &&
-        currentMetaDataRef.current?.created_by === currentUserData?.uid &&
-        !isDraftInActive
-      ) {
-        if (currentAutoSaveEntryMetaDataRef.current === undefined) {
-          saveEntryInMetadata();
-        } else {
-          updateEntryInMetadata();
-        }
-      }
-    };
-
     // Set an interval to check 10 minutes of inactivity
     const checkFor10MinutesOfInactivityInterval = setInterval(() => {
       if (lastChangeTimestampRef.current !== undefined) {
         const now = new Date().getTime();
-        if (now - lastChangeTimestampRef.current > 5000) {
-          console.log(
-            "It's been",
-            (now - lastChangeTimestampRef.current) / 1000,
-            " seconds since the last update time"
-          );
-        }
+        console.log(
+          "It's been",
+          (now - lastChangeTimestampRef.current) / 1000,
+          "seconds since the last update time"
+        );
         const numberOfSecondsSinceLastChange =
           (now - lastChangeTimestampRef.current) / 1000;
 
         if (numberOfSecondsSinceLastChange >= 600) {
+          console.log("It's been greater than 10 minutes.");
           if (!isDraftInActive) {
-            handleEntryMetadata();
+            console.log("Draft is not already active.");
+            saveEntryInMetadata(appToken ? appToken : "");
+            setIsDraftInActive(true);
+          } else {
+            console.log(
+              "Draft is already created since last active timestamp."
+            );
           }
-          setIsDraftInActive(true);
         }
       }
       return () => clearInterval(checkFor10MinutesOfInactivityInterval);
-    }, 5000);
+    }, 60000);
 
     // Cleanup function to clear the interval when the component is unmounted
     return () => clearInterval(checkFor10MinutesOfInactivityInterval);
-  }, [saveEntryInMetadata, updateEntryInMetadata, isDraftInActive]);
+  }, [saveEntryInMetadata, isDraftInActive, appToken]);
 
   // Unlocks the entry.
   const unLockEntry = React.useCallback(async (): Promise<void> => {
@@ -362,6 +421,7 @@ const CheckInOut = () => {
             // Set CurrentMetaData and currentMetaDataRef.current to undefined after unlocking
             setCurrentMetaData(undefined);
             setDataLoading(false);
+            setIsDraftInActive(false);
             currentMetaDataRef.current = undefined;
             lastChangeTimestampRef.current = undefined;
           } else {
@@ -396,7 +456,7 @@ const CheckInOut = () => {
     const currentTime = currentDate.toLocaleTimeString();
     if (currentMetaDataRef.current == undefined && entryId !== undefined) {
       try {
-        console.log("Attempt to lock thge entry.");
+        console.log("Attempt to lock the entry.");
         const response = await appSdk?.metadata.createMetaData({
           entity_uid: entryId,
           type: "entry",
@@ -437,7 +497,6 @@ const CheckInOut = () => {
 
       if (response) {
         setCurrentMetaData(response.metadata);
-
         const currentTimestamp = Date.now();
         lastChangeTimestampRef.current = currentTimestamp;
       } else {
@@ -449,7 +508,6 @@ const CheckInOut = () => {
   }, [appSdk, currentUserData]);
 
   const handleChange = async (whatChanged: any) => {
-    setIsDraftInActive(false);
     // Function to compare original/changed entry and return true if they are different
     function compareObjects(changedObject: any, originalObject: any) {
       // Do not compare if either object is undefined or null. This may create a false positive.
@@ -503,6 +561,10 @@ const CheckInOut = () => {
       // Start comparing the two objects
       compareKeys(changedObject, originalObject);
 
+      // Set the "Need for new draft" flag.
+      if (hasChanges) {
+        setIsDraftInActive(false);
+      }
       return hasChanges;
     }
 
@@ -513,18 +575,15 @@ const CheckInOut = () => {
         currentTimestamp - lastChangeTimestampRef.current;
 
       // If the time since the last change is greater than 59 seconds.
-      if (timeSinceLastChange >= 59000) {
-        if (
-          compareObjects(
-            whatChanged,
-            appSdk?.location?.CustomField?.entry?._data
-          )
-        ) {
-          lastChangeTimestampRef.current = currentTimestamp;
-          console.log(
-            "Updating last changed timestamp.",
-            lastChangeTimestampRef.current
-          );
+      if (
+        compareObjects(whatChanged, appSdk?.location?.CustomField?.entry?._data)
+      ) {
+        lastChangeTimestampRef.current = currentTimestamp;
+        console.log(
+          "Updating last changed timestamp.",
+          lastChangeTimestampRef.current
+        );
+        if (timeSinceLastChange >= 59000) {
           updateEntryLock();
         }
       } else {
