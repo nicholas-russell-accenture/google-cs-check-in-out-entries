@@ -390,7 +390,7 @@ const CheckInOut = () => {
         }
       }
       return () => clearInterval(checkFor10MinutesOfInactivityInterval);
-    }, 60000);
+    }, 5000);
 
     // Cleanup function to clear the interval when the component is unmounted
     return () => clearInterval(checkFor10MinutesOfInactivityInterval);
