@@ -22,7 +22,7 @@ const LockExpiredModal: React.FC<LockExpiredModalProps> = (props) => {
       <ModalHeader title="Lock Expired" />
       <ModalBody className="modalBodyCustomClass">
           <div>
-            <p>The lock has expired. Please save changes to prevent data loss.</p>
+            <p>The lock has expired. Unsaved changes can be restored from your Drafts. Learn more.</p>
           </div>
       </ModalBody>
       <ModalFooter>
