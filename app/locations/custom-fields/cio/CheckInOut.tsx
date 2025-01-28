@@ -214,6 +214,8 @@ const CheckInOut = () => {
       if (copyOfChangedEntry) {
         copyOfChangedEntry._version =
           appSdk?.location?.CustomField?.entry?._data?._version || 1;
+        copyOfChangedEntry.uid =
+          appSdk?.location?.CustomField?.entry?._data?.uid;
         delete copyOfChangedEntry._metadata;
         delete copyOfChangedEntry._embedded_items;
 
