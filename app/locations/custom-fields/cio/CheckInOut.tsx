@@ -42,6 +42,7 @@ const CheckInOut = () => {
   const lastChangeTimestampRef = React.useRef<number | undefined>(undefined);
   const [attemptToLockFailed, setAttemptToLockFailed] = React.useState(false);
 
+  // Deletes entry lock metadata.
   const deleteMetadata = async (metadataId: string, appToken: string) => {
     if (branch === null) {
       console.log(
@@ -84,51 +85,6 @@ const CheckInOut = () => {
     }
   };
 
-  // for delete auto save entry metadata
-  const deleteAutoSaveEntryMetadata = async (metadataId: string) => {
-    if (branch === null) {
-      console.log("Branch value is not available for use in request.");
-      return;
-    }
-
-    try {
-      if (appToken) {
-        const autoSaveMetadataApiEndpointCallResponse = await fetch(
-          `/api/contentstack/extension/metadata/delete?app-token=${appToken}&metadataId=${metadataId}&branch=${branch}`,
-          {
-            method: "DELETE", // Set the HTTP method to DELETE
-            headers: {
-              "Content-Type": "application/json", // Optional, if you're sending JSON data
-            },
-          }
-        );
-
-        // Check if the response was successful
-        if (!autoSaveMetadataApiEndpointCallResponse.ok) {
-          console.log(
-            "Failure response:",
-            autoSaveMetadataApiEndpointCallResponse
-          );
-          throw new Error("Failed to delete entry auto save metadata");
-        } else {
-          // Entry lock metadata was successfully deleted.
-          const autoSaveMetadataApiEndpointCallResponseJson =
-            await autoSaveMetadataApiEndpointCallResponse.json();
-          console.log(autoSaveMetadataApiEndpointCallResponseJson); // Log the response data (e.g., confirmation of deletion)
-
-          // Delete metadata
-          currentAutoSaveEntryMetaDataRef.current = undefined;
-          setCurrentAutoSaveEntryMetaData(undefined);
-          return true;
-        }
-      } else {
-        console.log("App Token is not set. Cannot remove entry metadata.");
-      }
-    } catch (error) {
-      console.error("Error deleting entry auto save metadata:", error);
-    }
-  };
-
   // Effect to update the ref when currentMetaData changes
   React.useEffect(() => {
     currentMetaDataRef.current = currentMetaData;
@@ -137,7 +93,6 @@ const CheckInOut = () => {
   // Determine whether or not the entry is locked.
   // If locked, show the modal to request an unlock or return to dashboard.
   React.useEffect(() => {
-    // setExtensionUid("bltbce177efe7284a0f") // use this for run locally
     const fetchMetadata = async () => {
       try {
         const entityUidToCheck = appSdk?.location.CustomField?.entry._data.uid;
@@ -209,7 +164,6 @@ const CheckInOut = () => {
       const currentTime = currentDate.toLocaleTimeString();
       const copyOfChangedEntry: any =
         appSdk?.location?.CustomField?.entry?._changedData;
-      console.log(copyOfChangedEntry);
 
       if (copyOfChangedEntry) {
         copyOfChangedEntry._version =
@@ -224,9 +178,13 @@ const CheckInOut = () => {
         const apiUrl = "/api/contentstack/draft_entry";
 
         try {
+          const branch = process.env
+            .NEXT_PUBLIC_CONTENTSTACK_BRANCH
+            ? process.env.NEXT_PUBLIC_CONTENTSTACK_BRANCH
+            : "gintegration";
           // Send the POST request with the draftEntry object as the payload
           const response = await fetch(
-            apiUrl + "?app-token=" + appToken + "&branch=gintegration",
+            apiUrl + "?app-token=" + appToken + "&branch=" + branch,
             {
               method: "POST",
               headers: {
@@ -739,9 +697,6 @@ const CheckInOut = () => {
 
       entry.onSave(async () => {
         await unLockEntry();
-        await deleteAutoSaveEntryMetadata(
-          currentAutoSaveEntryMetaDataRef.current.uid
-        );
       });
     } catch (error) {
       console.error("Error saving entry:", error);
