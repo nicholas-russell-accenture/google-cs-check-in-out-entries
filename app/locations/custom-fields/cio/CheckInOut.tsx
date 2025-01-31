@@ -19,6 +19,8 @@ const CheckInOut = () => {
   const [dataLoading, setDataLoading] = React.useState<boolean>(false);
   const [buttonDisabled, setButtonDisabled] = React.useState<boolean>(true);
   const [currentMetaData, setCurrentMetaData] = React.useState<any>(undefined);
+  const [currentAutoSaveEntryMetaData, setCurrentAutoSaveEntryMetaData] =
+    React.useState<any>(undefined);
   const [isUnlockEntryModalOpen, setIsUnlockEntryModalOpen] =
     React.useState(false);
   const [extensionUid, setExtensionUid] = React.useState<string>("");
@@ -26,9 +28,13 @@ const CheckInOut = () => {
     React.useState<string>("");
 
   const [isReady, setIsReady] = React.useState(false);
+  const [isDraftInActive, setIsDraftInActive] = React.useState(false);
 
   // Create a ref to hold the latest currentMetaData
   const currentMetaDataRef = React.useRef(currentMetaData);
+
+  // Create a ref to hold the latest currenAutoSaveEntrytMetaData
+  const currentAutoSaveEntryMetaDataRef = React.useRef<any>(undefined);
 
   // Define Refs for modals
   const lockExpiredModalVisibleRef = React.useRef(false);
@@ -36,10 +42,12 @@ const CheckInOut = () => {
   const lastChangeTimestampRef = React.useRef<number | undefined>(undefined);
   const [attemptToLockFailed, setAttemptToLockFailed] = React.useState(false);
 
+  // Deletes entry lock metadata.
   const deleteMetadata = async (metadataId: string, appToken: string) => {
-
     if (branch === null) {
-      console.log("Unlock attempt failed: branch value is not available for use in request.");
+      console.log(
+        "Unlock attempt failed: branch value is not available for use in request."
+      );
       return;
     }
 
@@ -87,6 +95,7 @@ const CheckInOut = () => {
       try {
         const entityUidToCheck = appSdk?.location.CustomField?.entry._data.uid;
         const resData = await appSdk?.metadata?.retrieveAllMetaData();
+        // for check Entry lock
         const filteredEntry: any = resData?.metadata.filter((item) => {
           return (
             item.entity_uid === entityUidToCheck &&
@@ -133,6 +142,218 @@ const CheckInOut = () => {
     fetchMetadata();
   }, [appSdk, currentUserData, contentstackAppDomain, attemptToLockFailed]);
 
+  // Effect to update the ref when currentAutoSaveEntryMetaData changes
+  React.useEffect(() => {
+    if (currentAutoSaveEntryMetaData !== undefined) {
+      currentAutoSaveEntryMetaDataRef.current = currentAutoSaveEntryMetaData;
+    }
+  }, [currentAutoSaveEntryMetaData]);
+
+  // for save entry inside auto-save extension
+  const saveEntryInMetadata = React.useCallback(
+    async (appToken: string): Promise<void> => {
+      console.log("Attempt to save entry draft.");
+
+      // Info about the entry and content type.
+      const entryId: any = appSdk?.location?.CustomField?.entry?._data?.uid;
+      const contentTypeUid: any =
+        appSdk?.location?.CustomField?.entry?.content_type?.uid;
+      const currentDate = new Date();
+      const currentTime = currentDate.toLocaleTimeString();
+      const copyOfChangedEntry: any =
+        appSdk?.location?.CustomField?.entry?._changedData;
+
+      if (copyOfChangedEntry) {
+        copyOfChangedEntry._version =
+          appSdk?.location?.CustomField?.entry?._data?._version || 1;
+        copyOfChangedEntry.uid =
+          appSdk?.location?.CustomField?.entry?._data?.uid;
+        delete copyOfChangedEntry._metadata;
+        delete copyOfChangedEntry._embedded_items;
+
+        // if (currentAutoSaveEntryMetaDataRef.current === undefined) {
+        // Define the API endpoint
+        const apiUrl = "/api/contentstack/draft_entry";
+
+        try {
+          const branch = process.env
+            .NEXT_PUBLIC_CONTENTSTACK_BRANCH
+            ? process.env.NEXT_PUBLIC_CONTENTSTACK_BRANCH
+            : "gintegration";
+          // Send the POST request with the draftEntry object as the payload
+          const response = await fetch(
+            apiUrl + "?app-token=" + appToken + "&branch=" + branch,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json", // Ensure the server knows it's JSON
+              },
+              body: JSON.stringify({
+                draftEntry: {
+                  title: `Draft: ${contentTypeUid}: ${copyOfChangedEntry.uid}: ${currentTime}`,
+                  entry_object: JSON.stringify({
+                    draftEntry: {
+                      entity_uid: entryId,
+                      _content_type_uid: contentTypeUid,
+                      entry: JSON.stringify(copyOfChangedEntry),
+                      userName: currentUserData?.name,
+                      currentUserTime: currentTime,
+                    },
+                  }),
+                  entry_uid: entryId,
+                  user_uid: currentUserData?.uid,
+                },
+              }),
+            }
+          );
+
+          // Handle the response
+          if (response.ok) {
+            // Parse the response JSON
+            const data = await response.json();
+            const draftEntryUid = data?.result?.entry?.uid;
+            const draftEntryCreatedAt = data?.result?.entry?.created_at;
+            if (draftEntryUid) {
+              addDraftInfoToMetadata(draftEntryUid, draftEntryCreatedAt);
+            }
+            return data; // Return the response data
+          } else {
+            // Handle errors, if any
+            const errorData = await response.json();
+            console.error("Failed to post draft entry:", errorData);
+            throw new Error(errorData.error || "Failed to post draft entry");
+          }
+        } catch (error) {
+          console.error("Error posting draft entry:", error);
+          throw new Error("An error occurred while posting the draft entry.");
+        }
+      }
+    },
+    [appSdk, currentUserData]
+  );
+
+  // for update entry inside auto-save extension
+  const addDraftInfoToMetadata = React.useCallback(
+    async (
+      draftEntryUid: string,
+      draftEntryCreatedAt: string
+    ): Promise<void> => {
+      if (!appSdk) return; // App SDK is not available.
+      const entryId: any = appSdk?.location?.CustomField?.entry?._data?.uid;
+      const AutoSaveExtensionUid = process.env
+        .NEXT_PUBLIC_CONTENTSTACK_AUTOSAVE_EXTENSION_UID
+        ? process.env.NEXT_PUBLIC_CONTENTSTACK_AUTOSAVE_EXTENSION_UID
+        : "";
+
+      // First, find if metadata item already exists:
+      const allRetrievedMetadata =
+        await appSdk?.metadata?.retrieveAllMetaData();
+      const draftMetadataForCurrentEntry: any =
+        allRetrievedMetadata?.metadata.filter((item) => {
+          return (
+            item.entity_uid === entryId &&
+            item.extension_uid === AutoSaveExtensionUid
+          );
+        });
+
+      if (draftMetadataForCurrentEntry.length > 0) {
+        console.log("Attempt to update metadata", draftMetadataForCurrentEntry);
+        setCurrentAutoSaveEntryMetaData(draftMetadataForCurrentEntry);
+        if (draftMetadataForCurrentEntry?.[0]?.drafts) {
+          draftMetadataForCurrentEntry[0].drafts.push({
+            draft_entry_uid: draftEntryUid,
+            draft_entry_created_at: draftEntryCreatedAt,
+            draft_entry_created_by_uid: currentUserData?.uid,
+          }); // Pushes to an existing drafts array.
+        }
+        const updateAvailableDraftsMetadataResponse =
+          await appSdk?.metadata.updateMetaData({
+            uid: draftMetadataForCurrentEntry[0].uid,
+            testAddingProperty: undefined, // Cleanup
+            autoDraft: undefined, // Cleanup
+            currentUserTime: undefined, // Cleanup
+            deleted_at: undefined, // Cleanup
+            updated_at: undefined, // Cleanup
+            updated_by: undefined, // Cleanup
+            userName: undefined, // Cleanup
+            entry: undefined, // Cleanup
+            drafts: draftMetadataForCurrentEntry?.[0]?.drafts
+              ? draftMetadataForCurrentEntry[0].drafts
+              : [
+                  {
+                    draft_entry_uid: draftEntryUid,
+                    draft_entry_created_at: draftEntryCreatedAt,
+                    draft_entry_created_by_uid: currentUserData?.uid,
+                  },
+                ], // Creates a new single draft.
+          });
+        console.log(
+          "Update available drafts metadata response:",
+          updateAvailableDraftsMetadataResponse
+        );
+      } else {
+        // Create new metadata item to track this entry's drafts
+        console.log("Attempt to create metadata.");
+        if (
+          appSdk?.location?.CustomField?.entry?.content_type?.uid !==
+            undefined &&
+          entryId !== undefined
+        ) {
+          const newMetadataResponse = await appSdk?.metadata.createMetaData({
+            type: "entry",
+            extension_uid: AutoSaveExtensionUid,
+            _content_type_uid:
+              appSdk?.location?.CustomField?.entry?.content_type?.uid,
+            entity_uid: entryId,
+            drafts: [
+              {
+                draft_entry_uid: draftEntryUid,
+                draft_entry_created_at: draftEntryCreatedAt,
+                draft_entry_created_by_uid: currentUserData?.uid,
+              },
+            ],
+          });
+          console.log("New metadata response:", newMetadataResponse);
+        }
+      }
+    },
+    [appSdk, currentUserData]
+  );
+
+  // useEffect to manage interval and calls for update entry in auto save extension
+  React.useEffect(() => {
+    // Set an interval to check 10 minutes of inactivity
+    const checkFor10MinutesOfInactivityInterval = setInterval(() => {
+      if (lastChangeTimestampRef.current !== undefined) {
+        const now = new Date().getTime();
+        console.log(
+          "It's been",
+          (now - lastChangeTimestampRef.current) / 1000,
+          "seconds since the last update time"
+        );
+        const numberOfSecondsSinceLastChange =
+          (now - lastChangeTimestampRef.current) / 1000;
+
+        if (numberOfSecondsSinceLastChange >= 600) {
+          console.log("It's been greater than 10 minutes.");
+          if (!isDraftInActive) {
+            console.log("Draft is not already active.");
+            saveEntryInMetadata(appToken ? appToken : "");
+            setIsDraftInActive(true);
+          } else {
+            console.log(
+              "Draft is already created since last active timestamp."
+            );
+          }
+        }
+      }
+      return () => clearInterval(checkFor10MinutesOfInactivityInterval);
+    }, 5000);
+
+    // Cleanup function to clear the interval when the component is unmounted
+    return () => clearInterval(checkFor10MinutesOfInactivityInterval);
+  }, [saveEntryInMetadata, isDraftInActive, appToken]);
+
   // Unlocks the entry.
   const unLockEntry = React.useCallback(async (): Promise<void> => {
     if (!appSdk) return; // Exit if appSdk is not available.
@@ -155,6 +376,7 @@ const CheckInOut = () => {
             // Set CurrentMetaData and currentMetaDataRef.current to undefined after unlocking
             setCurrentMetaData(undefined);
             setDataLoading(false);
+            setIsDraftInActive(false);
             currentMetaDataRef.current = undefined;
             lastChangeTimestampRef.current = undefined;
           } else {
@@ -187,8 +409,9 @@ const CheckInOut = () => {
     // Get the browser's current time.
     const currentDate = new Date();
     const currentTime = currentDate.toLocaleTimeString();
-    if (currentMetaDataRef.current == undefined) {
+    if (currentMetaDataRef.current == undefined && entryId !== undefined) {
       try {
+        console.log("Attempt to lock the entry.");
         const response = await appSdk?.metadata.createMetaData({
           entity_uid: entryId,
           type: "entry",
@@ -199,7 +422,8 @@ const CheckInOut = () => {
           currentUserTime: currentTime,
         });
 
-        if (response) {
+        if (response && response?.metadata?.EntryLocked) {
+          console.log("Entry is locked.", response);
           setCurrentMetaData(response.metadata);
         } else {
           console.log("Entry lock meta-data entry creation failed.");
@@ -228,7 +452,6 @@ const CheckInOut = () => {
 
       if (response) {
         setCurrentMetaData(response.metadata);
-
         const currentTimestamp = Date.now();
         lastChangeTimestampRef.current = currentTimestamp;
       } else {
@@ -240,13 +463,15 @@ const CheckInOut = () => {
   }, [appSdk, currentUserData]);
 
   const handleChange = async (whatChanged: any) => {
-    // Temporary debugging.
-    console.log("Change:", whatChanged, "Original", appSdk?.location?.CustomField?.entry?._data);
-
     // Function to compare original/changed entry and return true if they are different
     function compareObjects(changedObject: any, originalObject: any) {
       // Do not compare if either object is undefined or null. This may create a false positive.
-      if (changedObject === undefined || originalObject === undefined || changedObject === null || originalObject === null) {
+      if (
+        changedObject === undefined ||
+        originalObject === undefined ||
+        changedObject === null ||
+        originalObject === null
+      ) {
         return false;
       }
 
@@ -261,15 +486,9 @@ const CheckInOut = () => {
             const changedValue = changed[key];
             const originalValue = original[key];
 
-            // New content (likely a new line) in an RTE field. Ignore "entry_lock" field.
-            if (original[key] === undefined && key !== "entry_lock") {
-              hasChanges = true;
-              // Temporary debugging.
-              console.log("New Content Detected:", key);
-            }
 
-            // Check if the tags have changed.
-            if (key === 'tags' && changed.tags && original.tags) {
+            // for check change in Tags field
+            if (key === "tags" && changed.tags && original.tags) {
               for (let i = 0; i < original.tags.length; i++) {
                 if (original.tags[i] !== changed.tags[i]) {
                   hasChanges = true;
@@ -305,6 +524,10 @@ const CheckInOut = () => {
       // Start comparing the original entry vs. the changed entry.
       compareKeys(changedObject, originalObject);
 
+      // Set the "Need for new draft" flag.
+      if (hasChanges) {
+        setIsDraftInActive(false);
+      }
       return hasChanges;
     }
 
@@ -315,18 +538,15 @@ const CheckInOut = () => {
         currentTimestamp - lastChangeTimestampRef.current;
 
       // If the time since the last change is greater than 59 seconds.
-      if (timeSinceLastChange >= 59000) {
-        if (
-          compareObjects(
-            whatChanged,
-            appSdk?.location?.CustomField?.entry?._data
-          )
-        ) {
-          lastChangeTimestampRef.current = currentTimestamp;
-          console.log(
-            "Updating last changed timestamp.",
-            lastChangeTimestampRef.current
-          );
+      if (
+        compareObjects(whatChanged, appSdk?.location?.CustomField?.entry?._data)
+      ) {
+        lastChangeTimestampRef.current = currentTimestamp;
+        console.log(
+          "Updating last changed timestamp.",
+          lastChangeTimestampRef.current
+        );
+        if (timeSinceLastChange >= 59000) {
           updateEntryLock();
         }
       } else {
@@ -344,7 +564,6 @@ const CheckInOut = () => {
         compareObjects(whatChanged, appSdk?.location?.CustomField?.entry?._data)
       ) {
         await createEntryLock();
-        console.log("Locking Entry.");
         lastChangeTimestampRef.current = currentTimestamp;
         console.log(
           "Updating last changed timestamp.",
@@ -482,8 +701,8 @@ const CheckInOut = () => {
       const entry = appSdk?.location?.CustomField?.entry;
       if (!entry) return;
 
-      entry.onSave(() => {
-        unLockEntry();
+      entry.onSave(async () => {
+        await unLockEntry();
       });
     } catch (error) {
       console.error("Error saving entry:", error);
@@ -541,7 +760,7 @@ const CheckInOut = () => {
     entryLockMessage = "Entry is locked.";
     if (currentMetaData?.updated_by === currentUserData.uid) {
       entryLockMessage =
-        "Entry locked. Save changes before unlocking or going inactive to prevent data loss.";
+        "Entry locked. Save changes before unlocking or going inactive to prevent data loss, or check your available Drafts saved for restoring.";
     }
     entryIsLocked = true;
   }
