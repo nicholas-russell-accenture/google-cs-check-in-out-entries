@@ -71,9 +71,7 @@ const CheckInOut = () => {
         throw new Error("Failed to delete metadata");
       } else {
         // Entry lock metadata was successfully deleted.
-        const entryLockMetadataApiEndpointCallResponseJson =
-          await entryLockMetadataApiEndpointCallResponse.json();
-        console.log(entryLockMetadataApiEndpointCallResponseJson); // Log the response data (e.g., confirmation of deletion)
+        await entryLockMetadataApiEndpointCallResponse.json();
 
         // Delete metadata
         currentMetaDataRef.current = undefined;
@@ -476,7 +474,10 @@ const CheckInOut = () => {
       ) {
         return false;
       }
+
+      // Boolean to track if changes to the entry are detected.
       let hasChanges = false;
+
       // Function to recursively compare each key
       function compareKeys(changed: any, original: any, parentKey = "") {
         // Loop through the keys in the changed object
@@ -485,11 +486,14 @@ const CheckInOut = () => {
             const changedValue = changed[key];
             const originalValue = original[key];
 
+
             // for check change in Tags field
             if (key === "tags" && changed.tags && original.tags) {
               for (let i = 0; i < original.tags.length; i++) {
                 if (original.tags[i] !== changed.tags[i]) {
                   hasChanges = true;
+                  // Temporary debugging.
+                  console.log("New Tags Detected:", i);
                 }
               }
             }
@@ -507,7 +511,9 @@ const CheckInOut = () => {
               compareKeys(changedValue, originalValue, fullKey);
             } else {
               // If the values are different, log the change and mark hasChanges as true
-              if (changedValue !== originalValue) {
+              if (originalValue !== undefined && changedValue !== originalValue) {
+                // Temporary debugging.
+                console.log("New Value:", originalValue, changedValue);
                 hasChanges = true;
               }
             }
@@ -515,7 +521,7 @@ const CheckInOut = () => {
         }
       }
 
-      // Start comparing the two objects
+      // Start comparing the original entry vs. the changed entry.
       compareKeys(changedObject, originalObject);
 
       // Set the "Need for new draft" flag.
