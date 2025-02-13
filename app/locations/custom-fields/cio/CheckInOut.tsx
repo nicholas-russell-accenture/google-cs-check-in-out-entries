@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
@@ -10,6 +11,7 @@ import RequestUnlockModal from "@/app/components/RequestUnlockModal";
 import ShowModal from "./ShowModal";
 import UnlockEntryModal from "@/app/components/UnlockEntryModal";
 import LockExpiredModal from "@/app/components/LockExpiredModal";
+import OnSaveMandatoryFieldModal from "@/app/components/OnSaveMandatoryFieldModal";
 
 const CheckInOut = () => {
   const appSdk = useAppSdk();
@@ -83,11 +85,29 @@ const CheckInOut = () => {
     }
   };
 
+  const showMandatoryFieldModalRef = React.useRef(false);
+ 
+  const showMandatoryFieldModal = () => {
+      showMandatoryFieldModalRef.current = true;
+      cbModal({
+        component: ({ closeModal }: { closeModal: () => void }) => (
+          <OnSaveMandatoryFieldModal
+            closeModal={() => {
+              console.log("closeModal :");
+              showMandatoryFieldModalRef.current = false;
+              closeModal();
+            }}
+          />
+        ),
+      });
+    };
   // Effect to update the ref when currentMetaData changes
   React.useEffect(() => {
     currentMetaDataRef.current = currentMetaData;
   }, [currentMetaData]);
-
+  React.useEffect(() => {
+    showMandatoryFieldModal();  //opn pup up on load for setting Audience field
+  },[])
   // Determine whether or not the entry is locked.
   // If locked, show the modal to request an unlock or return to dashboard.
   React.useEffect(() => {
