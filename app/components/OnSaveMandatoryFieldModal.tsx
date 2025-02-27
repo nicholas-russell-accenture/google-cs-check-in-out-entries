@@ -8,10 +8,9 @@ import {
   ModalFooter,
   ModalHeader
 } from "@contentstack/venus-components";
- 
-// Define an interface for the props
 interface OnSaveMandatoryFieldProps {
   closeModal: () => void;
+  appSdk: any; 
 }
 /**
  * 
@@ -22,17 +21,21 @@ const fetchAudienceData = async () => {
   try{
     const response = await fetch(urlAudience, {
       method: 'GET',
-      headers: {
-        'api_key': 'blte7c3fb6302682736',
-        'authorization': 'csf48ce29f60c6089af332d867',
-        'Content-Type': 'application/json',
-        'branch': 'main'
-      },
+       headers: {
+      'api_key': 'blte7c3fb6302682736',
+      'authorization': 'csf48ce29f60c6089af332d867',
+      'Content-Type': 'application/json',
+      'branch': 'main'
+    },
     });
+    //const response = await fetch(urlAudience, headers);
     let res;
+     //console.log("response : ",response);
+
     if (response?.ok) {
       res = response.json();
     }
+    console.log("res : ",res);
     return res;
   }catch (e){
     console.log("Fetch Error :",e);
@@ -42,16 +45,17 @@ const fetchAudienceData = async () => {
 
 const OnSaveMandatoryFieldModal: React.FC<OnSaveMandatoryFieldProps> = (props) => {
   const { closeModal } = props;
+  const appSdk = props.appSdk;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [audienceData, setAudienceData] = useState<any | null>(null);
   const [selectedAudience, setSelectedAudience] = useState('');
   const [isButtonDisabled, setIsButtonDisabled] = useState(true);
-   
+  console.log("OnSaveMandatoryFieldModal start appSdk?.location? :", appSdk?.location?.CustomField);
+
   // Fetch audience data on mount
   useEffect(() => {
     const fetchData = async () => {
       const data = await fetchAudienceData();
-      console.log("data : ",data?.global_field);
       startTransition(() => {
         setAudienceData(data?.global_field);
       });
@@ -64,8 +68,15 @@ const OnSaveMandatoryFieldModal: React.FC<OnSaveMandatoryFieldProps> = (props) =
    */
   const handleSubmit = () => {
     // Logic to assign selectedValue to Contentstack Select field
-    // This may involve API calls or other methods depending on your setup
-    console.log("handleSubmit selectedAudience :",selectedAudience);
+    console.log("handleSubmit selectedAudience :", selectedAudience);
+    appSdk?.location?.CustomField?.field?.setData(selectedAudience)
+     const entry = appSdk.location.CustomField.entry; // Access the entry object
+    //console.log("handleSubmit entry sdp_article_audience :", appSdk?.location?.CustomField?.entry?._data.sdp_article_audience?.audience_select);
+    if(appSdk?.location?.CustomField?.entry._data.uid){
+      const audienceField = entry.getField('sdp_article_audience.audience_select'); // Retrieve the specific field
+       // Set the new value for the audience_select field
+        audienceField.setData(selectedAudience);
+    }
     closeModal(); // close model on continue
   };
   if (!audienceData) {

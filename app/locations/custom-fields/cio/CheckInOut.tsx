@@ -94,9 +94,10 @@ const CheckInOut = () => {
           <OnSaveMandatoryFieldModal
             closeModal={() => {
               console.log("closeModal :");
-              showMandatoryFieldModalRef.current = false;
+               showMandatoryFieldModalRef.current = false;
               closeModal();
             }}
+            appSdk={appSdk}
           />
         ),
       });
@@ -105,8 +106,14 @@ const CheckInOut = () => {
   React.useEffect(() => {
     currentMetaDataRef.current = currentMetaData;
   }, [currentMetaData]);
+  // Pop up to set audience field data
   React.useEffect(() => {
-    showMandatoryFieldModal();  //opn pup up on load for setting Audience field
+    if(!appSdk?.location?.CustomField?.field._data && !appSdk?.location?.CustomField?.entry._data.uid && 
+      (appSdk?.location?.CustomField?.entry?._data.sdp_article_audience?.audience_select != "Googlers" ||
+        appSdk?.location?.CustomField?.entry?._data.sdp_article_audience?.audience_select != "Resolvers")){
+          console.log("showMandatoryFieldModal appSdk :inside on load new entry ");
+          showMandatoryFieldModal();  //opn pup up on load for setting Audience field
+        }
   },[])
   // Determine whether or not the entry is locked.
   // If locked, show the modal to request an unlock or return to dashboard.
@@ -485,6 +492,9 @@ const CheckInOut = () => {
   const handleChange = async (whatChanged: any) => {
     // Function to compare original/changed entry and return true if they are different
     function compareObjects(changedObject: any, originalObject: any) {
+      if(appSdk?.location?.CustomField?.entry._data.uid  && changedObject?.sdp_article_audience?.audience_select == null){
+           showMandatoryFieldModal();
+      }
       // Do not compare if either object is undefined or null. This may create a false positive.
       if (
         changedObject === undefined ||
@@ -494,7 +504,6 @@ const CheckInOut = () => {
       ) {
         return false;
       }
-
       // Boolean to track if changes to the entry are detected.
       let hasChanges = false;
 
@@ -505,7 +514,6 @@ const CheckInOut = () => {
           if (changed.hasOwnProperty(key)) {
             const changedValue = changed[key];
             const originalValue = original[key];
-
 
             // for check change in Tags field
             if (key === "tags" && changed.tags && original.tags) {
@@ -557,7 +565,7 @@ const CheckInOut = () => {
       const timeSinceLastChange =
         currentTimestamp - lastChangeTimestampRef.current;
 
-      // If the time since the last change is greater than 59 seconds.
+        // If the time since the last change is greater than 59 seconds.
       if (
         compareObjects(whatChanged, appSdk?.location?.CustomField?.entry?._data)
       ) {
@@ -579,9 +587,10 @@ const CheckInOut = () => {
     } else {
       // Create a new lock if entry is unlocked.
       if (
+        compareObjects(whatChanged, appSdk?.location?.CustomField?.entry?._data && 
         currentMetaDataRef.current === undefined &&
-        fieldData?.status === 0 &&
-        compareObjects(whatChanged, appSdk?.location?.CustomField?.entry?._data)
+        fieldData?.status === 0
+        )
       ) {
         await createEntryLock();
         lastChangeTimestampRef.current = currentTimestamp;
