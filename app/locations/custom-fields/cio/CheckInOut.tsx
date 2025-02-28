@@ -492,8 +492,13 @@ const CheckInOut = () => {
   const handleChange = async (whatChanged: any) => {
     // Function to compare original/changed entry and return true if they are different
     function compareObjects(changedObject: any, originalObject: any) {
+      // if pop closed without selecting value it will re open till the value is set
+      if(!appSdk?.location?.CustomField?.entry._data.uid  && !appSdk?.location?.CustomField?.field._data){
+        showMandatoryFieldModal();
+      }
+      // if selected value is removed then pop up will open again
       if(appSdk?.location?.CustomField?.entry._data.uid  && changedObject?.sdp_article_audience?.audience_select == null){
-           showMandatoryFieldModal();
+        showMandatoryFieldModal();
       }
       // Do not compare if either object is undefined or null. This may create a false positive.
       if (

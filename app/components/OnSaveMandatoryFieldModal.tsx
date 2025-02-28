@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react/jsx-key */
 import React, { useState, useEffect, startTransition } from 'react';
@@ -12,37 +13,6 @@ interface OnSaveMandatoryFieldProps {
   closeModal: () => void;
   appSdk: any; 
 }
-/**
- * 
- * @returns 
- */
-const fetchAudienceData = async () => {
-  const urlAudience = `https://api.contentstack.io/v3/global_fields/sdp_audience`;
-  try{
-    const response = await fetch(urlAudience, {
-      method: 'GET',
-       headers: {
-      'api_key': 'blte7c3fb6302682736',
-      'authorization': 'csf48ce29f60c6089af332d867',
-      'Content-Type': 'application/json',
-      'branch': 'main'
-    },
-    });
-    //const response = await fetch(urlAudience, headers);
-    let res;
-     //console.log("response : ",response);
-
-    if (response?.ok) {
-      res = response.json();
-    }
-    console.log("res : ",res);
-    return res;
-  }catch (e){
-    console.log("Fetch Error :",e);
-  }
-  
-};
-
 const OnSaveMandatoryFieldModal: React.FC<OnSaveMandatoryFieldProps> = (props) => {
   const { closeModal } = props;
   const appSdk = props.appSdk;
@@ -52,16 +22,14 @@ const OnSaveMandatoryFieldModal: React.FC<OnSaveMandatoryFieldProps> = (props) =
   const [isButtonDisabled, setIsButtonDisabled] = useState(true);
   console.log("OnSaveMandatoryFieldModal start appSdk?.location? :", appSdk?.location?.CustomField);
 
-  // Fetch audience data on mount
+  const audienceOptions = [
+    { value: 'Googlers', label: 'Googlers' },
+    { value: 'Resolvers', label: 'Resolvers' },
+    // Add more options as needed
+  ];
+  // set audience options data on mount
   useEffect(() => {
-    const fetchData = async () => {
-      const data = await fetchAudienceData();
-      startTransition(() => {
-        setAudienceData(data?.global_field);
-      });
-    };
- 
-    fetchData();
+    setAudienceData(audienceOptions);
   }, []); // Empty dependency array means this runs once when the component mounts
   /**
    * Onsubmit assign the value to audience field
@@ -91,7 +59,7 @@ const OnSaveMandatoryFieldModal: React.FC<OnSaveMandatoryFieldProps> = (props) =
   return (
     <>
       <ModalHeader title="Audience Selection" />
-      <ModalBody className="modalBodyCustomClass">
+      <ModalBody className="modalBodyCustomClass" >
         <div>
            <p>
             <label htmlFor="audience" className="block text-sm font-medium text-gray-700 mb-2">
@@ -101,7 +69,7 @@ const OnSaveMandatoryFieldModal: React.FC<OnSaveMandatoryFieldProps> = (props) =
             <select id="audience" className="block w-1/3 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     value={selectedAudience} onChange={handleChange}>
               <option value="">Click to select options</option>
-              {audienceData?.schema[0]?.enum?.choices.map((audience:any) => (
+              {audienceOptions.map((audience:any) => (
                 <option key={audience.value} value={audience.value}>
                   {audience.value}
                 </option>
