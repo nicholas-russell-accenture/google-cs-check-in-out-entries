@@ -516,7 +516,7 @@ const CheckInOut = () => {
       // if selected value is removed then pop up will open again
       if(appSdk?.location?.CustomField?.entry._data.uid  &&
         (changedObject?.sdp_article_audience?.sdp_audience == null || 
-          changedObject?.sdp_article_audience?.sdp_audience == "Select an Option")){
+          changedObject?.sdp_article_audience?.sdp_audience == "None")){
         showMandatoryFieldModal();
       }
       // Boolean to track if changes to the entry are detected.
