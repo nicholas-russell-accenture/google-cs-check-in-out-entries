@@ -454,6 +454,12 @@ const CheckInOut = () => {
         if (response && response?.metadata?.EntryLocked) {
           console.log("Entry is locked.", response);
           setCurrentMetaData(response.metadata);
+          
+          // for clear version notes field when user edit the entry form
+          const currentField = appSdk?.location?.CustomField?.entry.getField("version_notes");
+          if (currentField) {
+            currentField.setData({ "version_notes": "" })
+          }
         } else {
           console.log("Entry lock meta-data entry creation failed.");
         }
