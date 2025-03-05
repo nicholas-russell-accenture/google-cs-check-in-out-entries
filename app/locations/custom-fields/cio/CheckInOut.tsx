@@ -91,31 +91,34 @@ const CheckInOut = () => {
   const showMandatoryFieldModalRef = React.useRef(false);
 
   const showMandatoryFieldModal = () => {
-      showMandatoryFieldModalRef.current = true;
-      cbModal({
-        component: ({ closeModal }: { closeModal: () => void }) => (
-          <OnSaveMandatoryFieldModal
-            closeModal={() => {
-              console.log("closeModal :");
-               showMandatoryFieldModalRef.current = false;
-              closeModal();
-            }}
-            appSdk={appSdk}
-          />
-        ),
-      });
-    };
-    // Pop up to set audience field data
-    React.useEffect(() => {
-      if(!appSdk?.location?.CustomField?.field._data && !appSdk?.location?.CustomField?.entry._data.uid && 
-        (appSdk?.location?.CustomField?.entry?._data.sdp_article_audience?.sdp_audience != "Googlers" ||
-          appSdk?.location?.CustomField?.entry?._data.sdp_article_audience?.sdp_audience != "Resolvers")){
-            console.log("showMandatoryFieldModal appSdk :inside on load new entry ");
-            showMandatoryFieldModal();  //opn pup up on load for setting Audience field
-          }
-    },[])
-
- 
+    showMandatoryFieldModalRef.current = true;
+    cbModal({
+      component: ({ closeModal }: { closeModal: () => void }) => (
+        <OnSaveMandatoryFieldModal
+          closeModal={() => {
+            console.log("closeModal :");
+            showMandatoryFieldModalRef.current = false;
+            closeModal();
+          }}
+          appSdk={appSdk}
+        />
+      ),
+    });
+  };
+  // Pop up to set audience field data
+  React.useEffect(() => {
+    if (
+      !appSdk?.location?.CustomField?.field._data &&
+      !appSdk?.location?.CustomField?.entry._data.uid &&
+      (appSdk?.location?.CustomField?.entry?._data.sdp_article_audience
+        ?.sdp_audience != "Googlers" ||
+        appSdk?.location?.CustomField?.entry?._data.sdp_article_audience
+          ?.sdp_audience != "Resolvers")
+    ) {
+      console.log("showMandatoryFieldModal appSdk :inside on load new entry ");
+      showMandatoryFieldModal(); //opn pup up on load for setting Audience field
+    }
+  }, []);
 
   // Determine whether or not the entry is locked.
   // If locked, show the modal to request an unlock or return to dashboard.
@@ -205,8 +208,7 @@ const CheckInOut = () => {
         const apiUrl = "/api/contentstack/draft_entry";
 
         try {
-          const branch = process.env
-            .NEXT_PUBLIC_CONTENTSTACK_BRANCH
+          const branch = process.env.NEXT_PUBLIC_CONTENTSTACK_BRANCH
             ? process.env.NEXT_PUBLIC_CONTENTSTACK_BRANCH
             : "gintegration";
           // Send the POST request with the draftEntry object as the payload
@@ -454,11 +456,12 @@ const CheckInOut = () => {
         if (response && response?.metadata?.EntryLocked) {
           console.log("Entry is locked.", response);
           setCurrentMetaData(response.metadata);
-          
+
           // for clear version notes field when user edit the entry form
-          const currentField = appSdk?.location?.CustomField?.entry.getField("version_notes");
+          const currentField =
+            appSdk?.location?.CustomField?.entry.getField("version_notes");
           if (currentField) {
-            currentField.setData({ "version_notes": "" })
+            currentField.setData({ version_notes: "" });
           }
         } else {
           console.log("Entry lock meta-data entry creation failed.");
@@ -510,13 +513,14 @@ const CheckInOut = () => {
         return false;
       }
       // if pop closed without selecting value it will re open till the value is set
-      if(!appSdk?.location?.CustomField?.entry._data.uid  && !appSdk?.location?.CustomField?.field._data){
-        showMandatoryFieldModal();
-      }
       // if selected value is removed then pop up will open again
-      if(appSdk?.location?.CustomField?.entry._data.uid  &&
-        (changedObject?.sdp_article_audience?.sdp_audience == null || 
-          changedObject?.sdp_article_audience?.sdp_audience == "None")){
+      if (
+        (!appSdk?.location?.CustomField?.entry._data.uid &&
+          !appSdk?.location?.CustomField?.field._data) ||
+        (appSdk?.location?.CustomField?.entry._data.uid &&
+          (changedObject?.sdp_article_audience?.sdp_audience == null ||
+            changedObject?.sdp_article_audience?.sdp_audience == "None"))
+      ) {
         showMandatoryFieldModal();
       }
       // Boolean to track if changes to the entry are detected.
@@ -529,7 +533,6 @@ const CheckInOut = () => {
           if (changed.hasOwnProperty(key)) {
             const changedValue = changed[key];
             const originalValue = original[key];
-
 
             // for check change in Tags field
             if (key === "tags" && changed.tags && original.tags) {
@@ -555,7 +558,10 @@ const CheckInOut = () => {
               compareKeys(changedValue, originalValue, fullKey);
             } else {
               // If the values are different, log the change and mark hasChanges as true
-              if (originalValue !== undefined && changedValue !== originalValue) {
+              if (
+                originalValue !== undefined &&
+                changedValue !== originalValue
+              ) {
                 // Temporary debugging.
                 console.log("New Value:", originalValue, changedValue);
                 hasChanges = true;
