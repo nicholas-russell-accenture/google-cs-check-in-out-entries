@@ -109,8 +109,8 @@ const CheckInOut = () => {
   // Pop up to set audience field data
   React.useEffect(() => {
     if(!appSdk?.location?.CustomField?.field._data && !appSdk?.location?.CustomField?.entry._data.uid && 
-      (appSdk?.location?.CustomField?.entry?._data.sdp_article_audience?.audience_select != "Googlers" ||
-        appSdk?.location?.CustomField?.entry?._data.sdp_article_audience?.audience_select != "Resolvers")){
+      (appSdk?.location?.CustomField?.entry?._data.sdp_article_audience?.sdp_audience != "Googlers" ||
+        appSdk?.location?.CustomField?.entry?._data.sdp_article_audience?.sdp_audience != "Resolvers")){
           console.log("showMandatoryFieldModal appSdk :inside on load new entry ");
           showMandatoryFieldModal();  //opn pup up on load for setting Audience field
         }
@@ -497,7 +497,7 @@ const CheckInOut = () => {
         showMandatoryFieldModal();
       }
       // if selected value is removed then pop up will open again
-      if(appSdk?.location?.CustomField?.entry._data.uid  && changedObject?.sdp_article_audience?.audience_select == null){
+      if(appSdk?.location?.CustomField?.entry._data.uid  && changedObject?.sdp_article_audience?.sdp_audience == null){
         showMandatoryFieldModal();
       }
       // Do not compare if either object is undefined or null. This may create a false positive.

@@ -39,10 +39,10 @@ const OnSaveMandatoryFieldModal: React.FC<OnSaveMandatoryFieldProps> = (props) =
     console.log("handleSubmit selectedAudience :", selectedAudience);
     appSdk?.location?.CustomField?.field?.setData(selectedAudience)
      const entry = appSdk.location.CustomField.entry; // Access the entry object
-    //console.log("handleSubmit entry sdp_article_audience :", appSdk?.location?.CustomField?.entry?._data.sdp_article_audience?.audience_select);
+    //console.log("handleSubmit entry sdp_article_audience :", appSdk?.location?.CustomField?.entry?._data.sdp_article_audience?.sdp_audience);
     if(appSdk?.location?.CustomField?.entry._data.uid){
-      const audienceField = entry.getField('sdp_article_audience.audience_select'); // Retrieve the specific field
-       // Set the new value for the audience_select field
+      const audienceField = entry.getField('sdp_article_audience.sdp_audience'); // Retrieve the specific field
+       // Set the new value for the sdp_audience field
         audienceField.setData(selectedAudience);
     }
     closeModal(); // close model on continue
