@@ -39,7 +39,6 @@ const OnSaveMandatoryFieldModal: React.FC<OnSaveMandatoryFieldProps> = (props) =
     console.log("handleSubmit selectedAudience :", selectedAudience);
     appSdk?.location?.CustomField?.field?.setData(selectedAudience)
      const entry = appSdk.location.CustomField.entry; // Access the entry object
-    //console.log("handleSubmit entry sdp_article_audience :", appSdk?.location?.CustomField?.entry?._data.sdp_article_audience?.sdp_audience);
     if(appSdk?.location?.CustomField?.entry._data.uid){
       const audienceField = entry.getField('sdp_article_audience.sdp_audience'); // Retrieve the specific field
        // Set the new value for the sdp_audience field
@@ -63,7 +62,7 @@ const OnSaveMandatoryFieldModal: React.FC<OnSaveMandatoryFieldProps> = (props) =
         <div>
            <p>
             <label htmlFor="audience" className="block text-sm font-medium text-gray-700 mb-2">
-              <h3>Select the main audience for your article, Select Googlers for articles meant for all Googlers and Resolvers for articles meant for technicians only.</h3>
+             <span className="not-bold">Select the main audience for your article. Select Googlers for articles meant for all Googlers and Resolvers for articles meant for technicians only.</span>
               {/*audienceData?.schema[0]?.display_name */}
             </label>
             <select id="audience" className="block w-1/3 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
