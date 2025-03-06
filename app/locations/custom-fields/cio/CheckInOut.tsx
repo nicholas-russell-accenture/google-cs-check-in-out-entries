@@ -91,23 +91,27 @@ const CheckInOut = () => {
   const showMandatoryFieldModalRef = React.useRef(false);
 
   const showMandatoryFieldModal = () => {
-    if (showMandatoryFieldModalRef.current) return;
-    showMandatoryFieldModalRef.current = true;
-    cbModal({
-      component: ({ closeModal }: { closeModal: () => void }) => (
-        <OnSaveMandatoryFieldModal
-          closeModal={() => {
-            console.log("closeModal :");
-            showMandatoryFieldModalRef.current = false;
-            closeModal();
-          }}
-          appSdk={appSdk}
-        />
-      ),
-    });
+    if (appSdk?.location?.CustomField?.entry?.content_type?.uid == "sdp_knowledge_article" ||
+      appSdk?.location?.CustomField?.entry?.content_type?.uid == "sdp_troubleshooter") {
+      if (showMandatoryFieldModalRef.current) return;
+      showMandatoryFieldModalRef.current = true;
+      cbModal({
+        component: ({ closeModal }: { closeModal: () => void }) => (
+          <OnSaveMandatoryFieldModal
+            closeModal={() => {
+              console.log("closeModal :");
+              showMandatoryFieldModalRef.current = false;
+              closeModal();
+            }}
+            appSdk={appSdk}
+          />
+        ),
+      });
+    }
   };
   // Pop up to set audience field data
   React.useEffect(() => {
+ console.log("here also..... in use effect")
     if (
       !appSdk?.location?.CustomField?.field._data &&
       !appSdk?.location?.CustomField?.entry._data.uid &&
@@ -116,7 +120,6 @@ const CheckInOut = () => {
         appSdk?.location?.CustomField?.entry?._data.sdp_article_audience
           ?.sdp_audience != "Resolvers")
     ) {
-      console.log("here also..... in use effect")
       console.log("showMandatoryFieldModal appSdk :inside on load new entry ");
       showMandatoryFieldModal(); //opn pup up on load for setting Audience field
     }
@@ -514,6 +517,7 @@ const CheckInOut = () => {
       ) {
         return false;
       }
+      
       // if pop closed without selecting value it will re open till the value is set
       // if selected value is removed then pop up will open again
       if (
