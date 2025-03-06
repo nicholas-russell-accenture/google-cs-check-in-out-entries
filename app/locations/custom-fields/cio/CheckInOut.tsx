@@ -91,6 +91,7 @@ const CheckInOut = () => {
   const showMandatoryFieldModalRef = React.useRef(false);
 
   const showMandatoryFieldModal = () => {
+    if (showMandatoryFieldModalRef.current) return;
     showMandatoryFieldModalRef.current = true;
     cbModal({
       component: ({ closeModal }: { closeModal: () => void }) => (
@@ -115,6 +116,7 @@ const CheckInOut = () => {
         appSdk?.location?.CustomField?.entry?._data.sdp_article_audience
           ?.sdp_audience != "Resolvers")
     ) {
+      console.log("here also..... in use effect")
       console.log("showMandatoryFieldModal appSdk :inside on load new entry ");
       showMandatoryFieldModal(); //opn pup up on load for setting Audience field
     }
@@ -521,7 +523,9 @@ const CheckInOut = () => {
           (changedObject?.sdp_article_audience?.sdp_audience == null ||
             changedObject?.sdp_article_audience?.sdp_audience == "None"))
       ) {
-        showMandatoryFieldModal();
+        if (!showMandatoryFieldModalRef.current) {
+          showMandatoryFieldModal();
+        }
       }
       // Boolean to track if changes to the entry are detected.
       let hasChanges = false;
