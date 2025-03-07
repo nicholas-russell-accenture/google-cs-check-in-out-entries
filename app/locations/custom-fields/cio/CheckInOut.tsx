@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-wrapper-object-types */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
@@ -116,14 +117,6 @@ const CheckInOut = () => {
   // Pop up to set audience field data
   React.useEffect(() => {
 
-    console.log(
-      "On load: audience field",
-      appSdk?.location?.CustomField?.entry?._data?.uid,
-      appSdk?.location?.CustomField?.field.getData() as String,
-      appSdk?.location?.CustomField?.entry?._data?.sdp_article_audience
-        .sdp_audience
-    );
-
     // Populate value of audience field if it is set in "Entry Lock" field storage, but is empty in "Audience" field storage
     if (
       appSdk?.location?.CustomField?.entry._data.uid &&
@@ -136,11 +129,11 @@ const CheckInOut = () => {
         (appSdk?.location?.CustomField?.field.getData() as String) ==
           "Resolvers")
     ) {
-      appSdk?.location?.CustomField?.entry
-        .getField("sdp_article_audience")
-        .setData({
-          sdp_audience: appSdk?.location?.CustomField?.field.getData(),
-        });
+      const entry = appSdk.location.CustomField.entry;
+      const audienceField = entry.getField('sdp_article_audience.sdp_audience'); // Retrieve the specific field
+
+      // Set the new value for the sdp_audience field
+      audienceField.setData(appSdk?.location?.CustomField?.field.getData());
     }
 
     if (
@@ -558,7 +551,6 @@ const CheckInOut = () => {
       ) {
         return false;
       }
-
       // if pop closed without selecting value it will re open till the value is set
       // if selected value is removed then pop up will open again
       if (
