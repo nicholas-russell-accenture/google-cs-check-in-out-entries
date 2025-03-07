@@ -115,13 +115,34 @@ const CheckInOut = () => {
   };
   // Pop up to set audience field data
   React.useEffect(() => {
+
     console.log(
       "On load: audience field",
-      appSdk?.location?.CustomField?.entry._data.uid,
+      appSdk?.location?.CustomField?.entry?._data?.uid,
       appSdk?.location?.CustomField?.field.getData() as String,
-      appSdk?.location?.CustomField?.entry?._data.sdp_article_audience
+      appSdk?.location?.CustomField?.entry?._data?.sdp_article_audience
         .sdp_audience
     );
+
+    // Populate value of audience field if it is set in "Entry Lock" field storage, but is empty in "Audience" field storage
+    if (
+      appSdk?.location?.CustomField?.entry._data.uid &&
+      appSdk?.location?.CustomField?.entry._data?.sdp_article_audience
+        ?.sdp_audience !== "Googlers" &&
+      appSdk?.location?.CustomField?.entry._data?.sdp_article_audience
+        ?.sdp_audience !== "Resolvers" &&
+      ((appSdk?.location?.CustomField?.field.getData() as String) ==
+        "Googlers" ||
+        (appSdk?.location?.CustomField?.field.getData() as String) ==
+          "Resolvers")
+    ) {
+      appSdk?.location?.CustomField?.entry
+        .getField("sdp_article_audience")
+        .setData({
+          sdp_audience: appSdk?.location?.CustomField?.field.getData(),
+        });
+    }
+
     if (
       // Entry is new and neither Entry Lock field nor Audience field is set to "Googlers" or "Resolvers".
       (!appSdk?.location?.CustomField?.field._data && // Entry lock custom field value is empty. &&
@@ -536,27 +557,6 @@ const CheckInOut = () => {
         originalObject === null
       ) {
         return false;
-      }
-
-      // Populate value of audience field if it is set in "Entry Lock" field storage, but is empty in "Audience" field storage
-      if (
-        appSdk?.location?.CustomField?.entry._data.uid &&
-        appSdk?.location?.CustomField?.entry._data?.sdp_article_audience
-          ?.sdp_audience !== "Googlers" &&
-        appSdk?.location?.CustomField?.entry._data?.sdp_article_audience
-          ?.sdp_audience !== "Resolvers" &&
-        ((appSdk?.location?.CustomField?.field.getData() as String) ==
-          "Googlers" ||
-          (appSdk?.location?.CustomField?.field.getData() as String) ==
-            "Resolvers")
-      ) {
-        appSdk?.location?.CustomField?.entry
-          .getField("sdp_article_audience")
-          .setData({
-            sdp_article_audience: {
-              sdp_audience: appSdk?.location?.CustomField?.field.getData(),
-            },
-          });
       }
 
       // if pop closed without selecting value it will re open till the value is set
