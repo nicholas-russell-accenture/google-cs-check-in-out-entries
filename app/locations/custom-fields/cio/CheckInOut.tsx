@@ -91,8 +91,12 @@ const CheckInOut = () => {
   const showMandatoryFieldModalRef = React.useRef(false);
 
   const showMandatoryFieldModal = () => {
-    if (appSdk?.location?.CustomField?.entry?.content_type?.uid == "sdp_knowledge_article" ||
-      appSdk?.location?.CustomField?.entry?.content_type?.uid == "sdp_troubleshooter") {
+    if (
+      appSdk?.location?.CustomField?.entry?.content_type?.uid ==
+        "sdp_knowledge_article" ||
+      appSdk?.location?.CustomField?.entry?.content_type?.uid ==
+        "sdp_troubleshooter"
+    ) {
       if (showMandatoryFieldModalRef.current) return;
       showMandatoryFieldModalRef.current = true;
       cbModal({
@@ -111,16 +115,32 @@ const CheckInOut = () => {
   };
   // Pop up to set audience field data
   React.useEffect(() => {
- console.log("here also..... in use effect")
+    console.log(
+      "On load: audience field",
+      appSdk?.location?.CustomField?.entry._data.uid,
+      appSdk?.location?.CustomField?.field.getData() as String,
+      appSdk?.location?.CustomField?.entry?._data.sdp_article_audience
+        .sdp_audience
+    );
     if (
-      !appSdk?.location?.CustomField?.field._data &&
-      !appSdk?.location?.CustomField?.entry._data.uid &&
-      (appSdk?.location?.CustomField?.entry?._data.sdp_article_audience
-        ?.sdp_audience != "Googlers" ||
-        appSdk?.location?.CustomField?.entry?._data.sdp_article_audience
-          ?.sdp_audience != "Resolvers")
+      // Entry is new and neither Entry Lock field nor Audience field is set to "Googlers" or "Resolvers".
+      (!appSdk?.location?.CustomField?.field._data && // Entry lock custom field value is empty. &&
+        !appSdk?.location?.CustomField?.entry._data.uid && // Entry is new (no UID exists). &&
+        (appSdk?.location?.CustomField?.entry?._data.sdp_article_audience
+          ?.sdp_audience != "Googlers" ||
+          appSdk?.location?.CustomField?.entry?._data.sdp_article_audience
+            ?.sdp_audience != "Resolvers")) || // or...
+      // Entry is not new and neither Entry Lock field nor Audience field is set to "Googlers" or "Resolvers".
+      (appSdk?.location?.CustomField?.entry._data.uid && // Entry is not new (UID exists). &&
+        (appSdk?.location?.CustomField?.field.getData() as String) !==
+          "Googlers" && // Entry Lock field is not "Googlers". &&
+        (appSdk?.location?.CustomField?.field.getData() as String) !==
+          "Resolvers" && // Entry Lock field is not "Resolvers".
+        (appSdk?.location?.CustomField?.entry?._data.sdp_article_audience
+          ?.sdp_audience !== "Googlers" ||
+          appSdk?.location?.CustomField?.entry?._data.sdp_article_audience
+            ?.sdp_audience !== "Resolvers"))
     ) {
-      console.log("showMandatoryFieldModal appSdk :inside on load new entry ");
       showMandatoryFieldModal(); //opn pup up on load for setting Audience field
     }
   }, []);
@@ -517,7 +537,28 @@ const CheckInOut = () => {
       ) {
         return false;
       }
-      
+
+      // Populate value of audience field if it is set in "Entry Lock" field storage, but is empty in "Audience" field storage
+      if (
+        appSdk?.location?.CustomField?.entry._data.uid &&
+        appSdk?.location?.CustomField?.entry._data?.sdp_article_audience
+          ?.sdp_audience !== "Googlers" &&
+        appSdk?.location?.CustomField?.entry._data?.sdp_article_audience
+          ?.sdp_audience !== "Resolvers" &&
+        ((appSdk?.location?.CustomField?.field.getData() as String) ==
+          "Googlers" ||
+          (appSdk?.location?.CustomField?.field.getData() as String) ==
+            "Resolvers")
+      ) {
+        appSdk?.location?.CustomField?.entry
+          .getField("sdp_article_audience")
+          .setData({
+            sdp_article_audience: {
+              sdp_audience: appSdk?.location?.CustomField?.field.getData(),
+            },
+          });
+      }
+
       // if pop closed without selecting value it will re open till the value is set
       // if selected value is removed then pop up will open again
       if (
