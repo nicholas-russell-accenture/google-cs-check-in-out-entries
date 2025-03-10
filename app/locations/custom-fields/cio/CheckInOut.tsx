@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-wrapper-object-types */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
@@ -10,6 +11,7 @@ import RequestUnlockModal from "@/app/components/RequestUnlockModal";
 import ShowModal from "./ShowModal";
 import UnlockEntryModal from "@/app/components/UnlockEntryModal";
 import LockExpiredModal from "@/app/components/LockExpiredModal";
+import OnSaveMandatoryFieldModal from "@/app/components/OnSaveMandatoryFieldModal";
 
 const CheckInOut = () => {
   const appSdk = useAppSdk();
@@ -87,6 +89,75 @@ const CheckInOut = () => {
   React.useEffect(() => {
     currentMetaDataRef.current = currentMetaData;
   }, [currentMetaData]);
+  const showMandatoryFieldModalRef = React.useRef(false);
+
+  const showMandatoryFieldModal = () => {
+    if (
+      appSdk?.location?.CustomField?.entry?.content_type?.uid ==
+        "sdp_knowledge_article" ||
+      appSdk?.location?.CustomField?.entry?.content_type?.uid ==
+        "sdp_troubleshooter"
+    ) {
+      if (showMandatoryFieldModalRef.current) return;
+      showMandatoryFieldModalRef.current = true;
+      cbModal({
+        component: ({ closeModal }: { closeModal: () => void }) => (
+          <OnSaveMandatoryFieldModal
+            closeModal={() => {
+              console.log("closeModal :");
+              showMandatoryFieldModalRef.current = false;
+              closeModal();
+            }}
+            appSdk={appSdk}
+          />
+        ),
+      });
+    }
+  };
+  // Pop up to set audience field data
+  React.useEffect(() => {
+
+    // Populate value of audience field if it is set in "Entry Lock" field storage, but is empty in "Audience" field storage
+    if (
+      appSdk?.location?.CustomField?.entry._data.uid &&
+      appSdk?.location?.CustomField?.entry._data?.sdp_article_audience
+        ?.sdp_audience !== "Googlers" &&
+      appSdk?.location?.CustomField?.entry._data?.sdp_article_audience
+        ?.sdp_audience !== "Resolvers" &&
+      ((appSdk?.location?.CustomField?.field.getData() as String) ==
+        "Googlers" ||
+        (appSdk?.location?.CustomField?.field.getData() as String) ==
+          "Resolvers")
+    ) {
+      const entry = appSdk.location.CustomField.entry;
+      const audienceField = entry.getField('sdp_article_audience.sdp_audience'); // Retrieve the specific field
+
+      // Set the new value for the sdp_audience field
+      audienceField.setData(appSdk?.location?.CustomField?.field.getData());
+    }
+
+    if (
+      // Entry is new and neither Entry Lock field nor Audience field is set to "Googlers" or "Resolvers".
+      (!appSdk?.location?.CustomField?.field._data && // Entry lock custom field value is empty. &&
+        !appSdk?.location?.CustomField?.entry._data.uid && // Entry is new (no UID exists). &&
+        (appSdk?.location?.CustomField?.entry?._data.sdp_article_audience
+          ?.sdp_audience != "Googlers" ||
+          appSdk?.location?.CustomField?.entry?._data.sdp_article_audience
+            ?.sdp_audience != "Resolvers")) || // or...
+      // Entry is not new and neither Entry Lock field nor Audience field is set to "Googlers" or "Resolvers".
+      (appSdk?.location?.CustomField?.entry._data.uid && // Entry is not new (UID exists). &&
+        (appSdk?.location?.CustomField?.field.getData() as String) !==
+          "Googlers" && // Entry Lock field is not "Googlers". &&
+        (appSdk?.location?.CustomField?.field.getData() as String) !==
+          "Resolvers" && // Entry Lock field is not "Resolvers".
+        (appSdk?.location?.CustomField?.entry?._data.sdp_article_audience
+          ?.sdp_audience !== "Googlers" ||
+          appSdk?.location?.CustomField?.entry?._data.sdp_article_audience
+            ?.sdp_audience !== "Resolvers"))
+    ) {
+      showMandatoryFieldModal(); //opn pup up on load for setting Audience field
+    }
+  }, []);
 
   // Determine whether or not the entry is locked.
   // If locked, show the modal to request an unlock or return to dashboard.
@@ -176,8 +247,7 @@ const CheckInOut = () => {
         const apiUrl = "/api/contentstack/draft_entry";
 
         try {
-          const branch = process.env
-            .NEXT_PUBLIC_CONTENTSTACK_BRANCH
+          const branch = process.env.NEXT_PUBLIC_CONTENTSTACK_BRANCH
             ? process.env.NEXT_PUBLIC_CONTENTSTACK_BRANCH
             : "gintegration";
           // Send the POST request with the draftEntry object as the payload
@@ -425,6 +495,13 @@ const CheckInOut = () => {
         if (response && response?.metadata?.EntryLocked) {
           console.log("Entry is locked.", response);
           setCurrentMetaData(response.metadata);
+
+          // for clear version notes field when user edit the entry form
+          const currentField =
+            appSdk?.location?.CustomField?.entry.getField("version_notes");
+          if (currentField) {
+            currentField.setData({ version_notes: "" });
+          }
         } else {
           console.log("Entry lock meta-data entry creation failed.");
         }
@@ -474,7 +551,21 @@ const CheckInOut = () => {
       ) {
         return false;
       }
-
+      // if pop closed without selecting value it will re open till the value is set
+      // if selected value is removed then pop up will open again
+      if (
+        (!appSdk?.location?.CustomField?.entry._data.uid &&
+          !appSdk?.location?.CustomField?.field._data) ||
+        (appSdk?.location?.CustomField?.entry._data.uid &&
+          (changedObject?.sdp_article_audience?.sdp_audience == null &&  
+          (changedObject?.sdp_article_audience?.sdp_audience != "Resolvers" ||
+            changedObject?.sdp_article_audience?.sdp_audience != "Goolgers" ) ||
+          changedObject?.sdp_article_audience?.sdp_audience == "None"))
+      ) {
+        if (!showMandatoryFieldModalRef.current) {
+          showMandatoryFieldModal();
+        }
+      }
       // Boolean to track if changes to the entry are detected.
       let hasChanges = false;
 
@@ -485,7 +576,6 @@ const CheckInOut = () => {
           if (changed.hasOwnProperty(key)) {
             const changedValue = changed[key];
             const originalValue = original[key];
-
 
             // for check change in Tags field
             if (key === "tags" && changed.tags && original.tags) {
@@ -511,7 +601,10 @@ const CheckInOut = () => {
               compareKeys(changedValue, originalValue, fullKey);
             } else {
               // If the values are different, log the change and mark hasChanges as true
-              if (originalValue !== undefined && changedValue !== originalValue) {
+              if (
+                originalValue !== undefined &&
+                changedValue !== originalValue
+              ) {
                 // Temporary debugging.
                 console.log("New Value:", originalValue, changedValue);
                 hasChanges = true;
