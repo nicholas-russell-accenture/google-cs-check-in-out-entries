@@ -116,7 +116,6 @@ const CheckInOut = () => {
   };
   // Pop up to set audience field data
   React.useEffect(() => {
-
     // Populate value of audience field if it is set in "Entry Lock" field storage, but is empty in "Audience" field storage
     if (
       appSdk?.location?.CustomField?.entry._data.uid &&
@@ -130,7 +129,7 @@ const CheckInOut = () => {
           "Resolvers")
     ) {
       const entry = appSdk.location.CustomField.entry;
-      const audienceField = entry.getField('sdp_article_audience.sdp_audience'); // Retrieve the specific field
+      const audienceField = entry.getField("sdp_article_audience.sdp_audience"); // Retrieve the specific field
 
       // Set the new value for the sdp_audience field
       audienceField.setData(appSdk?.location?.CustomField?.field.getData());
@@ -140,21 +139,22 @@ const CheckInOut = () => {
       // Entry is new and neither Entry Lock field nor Audience field is set to "Googlers" or "Resolvers".
       (!appSdk?.location?.CustomField?.field._data && // Entry lock custom field value is empty. &&
         !appSdk?.location?.CustomField?.entry._data.uid && // Entry is new (no UID exists). &&
-        (appSdk?.location?.CustomField?.entry?._data.sdp_article_audience
-          ?.sdp_audience != "Googlers" ||
-          appSdk?.location?.CustomField?.entry?._data.sdp_article_audience
-            ?.sdp_audience != "Resolvers")) || // or...
+        appSdk?.location?.CustomField?.entry?._data.sdp_article_audience
+          ?.sdp_audience != "Googlers" &&
+        appSdk?.location?.CustomField?.entry?._data.sdp_article_audience
+          ?.sdp_audience != "Resolvers") || // or...
       // Entry is not new and neither Entry Lock field nor Audience field is set to "Googlers" or "Resolvers".
       (appSdk?.location?.CustomField?.entry._data.uid && // Entry is not new (UID exists). &&
         (appSdk?.location?.CustomField?.field.getData() as String) !==
           "Googlers" && // Entry Lock field is not "Googlers". &&
         (appSdk?.location?.CustomField?.field.getData() as String) !==
           "Resolvers" && // Entry Lock field is not "Resolvers".
-        (appSdk?.location?.CustomField?.entry?._data.sdp_article_audience
-          ?.sdp_audience !== "Googlers" ||
-          appSdk?.location?.CustomField?.entry?._data.sdp_article_audience
-            ?.sdp_audience !== "Resolvers"))
+        appSdk?.location?.CustomField?.entry?._data.sdp_article_audience
+          ?.sdp_audience !== "Googlers" &&
+        appSdk?.location?.CustomField?.entry?._data.sdp_article_audience
+          ?.sdp_audience !== "Resolvers")
     ) {
+      console.log("Conditions not met");
       showMandatoryFieldModal(); //opn pup up on load for setting Audience field
     }
   }, []);
@@ -540,6 +540,20 @@ const CheckInOut = () => {
   }, [appSdk, currentUserData]);
 
   const handleChange = async (whatChanged: any) => {
+    // if pop closed without selecting value it will re open till the value is set
+    // if selected value is removed then pop up will open again
+    if (
+      (!appSdk?.location?.CustomField?.entry._data.uid &&
+        !appSdk?.location?.CustomField?.field._data) ||
+      (appSdk?.location?.CustomField?.entry._data.uid &&
+        whatChanged?.sdp_article_audience?.sdp_audience !== "Resolvers" &&
+        whatChanged?.sdp_article_audience?.sdp_audience !== "Googlers")
+    ) {
+      if (!showMandatoryFieldModalRef.current) {
+        showMandatoryFieldModal();
+      }
+    }
+
     // Function to compare original/changed entry and return true if they are different
     function compareObjects(changedObject: any, originalObject: any) {
       // Do not compare if either object is undefined or null. This may create a false positive.
@@ -551,21 +565,7 @@ const CheckInOut = () => {
       ) {
         return false;
       }
-      // if pop closed without selecting value it will re open till the value is set
-      // if selected value is removed then pop up will open again
-      if (
-        (!appSdk?.location?.CustomField?.entry._data.uid &&
-          !appSdk?.location?.CustomField?.field._data) ||
-        (appSdk?.location?.CustomField?.entry._data.uid &&
-          (changedObject?.sdp_article_audience?.sdp_audience == null &&  
-          (changedObject?.sdp_article_audience?.sdp_audience != "Resolvers" ||
-            changedObject?.sdp_article_audience?.sdp_audience != "Goolgers" ) ||
-          changedObject?.sdp_article_audience?.sdp_audience == "None"))
-      ) {
-        if (!showMandatoryFieldModalRef.current) {
-          showMandatoryFieldModal();
-        }
-      }
+
       // Boolean to track if changes to the entry are detected.
       let hasChanges = false;
 
