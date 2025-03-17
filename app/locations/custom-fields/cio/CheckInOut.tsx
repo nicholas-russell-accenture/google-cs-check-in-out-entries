@@ -577,7 +577,7 @@ const CheckInOut = () => {
             const changedValue = changed[key];
             const originalValue = original[key];
 
-            // // for check change in Tags field
+            // Check for tags field difference
             if (key === "tags" && Array.isArray(changed.tags) && Array.isArray(original.tags)) {
               if (changed.tags.length !== original.tags.length) {
                 hasChanges = true;
@@ -590,7 +590,7 @@ const CheckInOut = () => {
               }
             }
 
-            // // for check change in Keywords field
+            // Check for keywords field difference
             if (key === "sdp_article_keywords" && Array.isArray(changed.sdp_article_keywords) && Array.isArray(original.sdp_article_keywords)) {
               if (changed.sdp_article_keywords.length !== original.sdp_article_keywords.length) {
                 hasChanges = true;
@@ -603,7 +603,7 @@ const CheckInOut = () => {
               }
             }
 
-            // // for check change in Category field
+            // Check for category field difference
             if (key === "taxonomies" && Array.isArray(changed.taxonomies) && Array.isArray(original.taxonomies)) {
               if (changed.taxonomies.length !== original.taxonomies.length) {
                 hasChanges = true;
@@ -619,7 +619,7 @@ const CheckInOut = () => {
               }
             }
 
-            // // for check change in taxonomy field
+            // Check for taxonomy field difference
             if (key === "sdp_article_taxonomy" && Array.isArray(changed.sdp_article_taxonomy) && Array.isArray(original.sdp_article_taxonomy)) {
               if (changed.sdp_article_taxonomy.length !== original.sdp_article_taxonomy.length) {
                 hasChanges = true;
