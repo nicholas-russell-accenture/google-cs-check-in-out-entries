@@ -577,17 +577,64 @@ const CheckInOut = () => {
             const changedValue = changed[key];
             const originalValue = original[key];
 
-            // for check change in Tags field
-            if (key === "tags" && changed.tags && original.tags) {
-              for (let i = 0; i < original.tags.length; i++) {
-                if (original.tags[i] !== changed.tags[i]) {
+            // Check for tags field difference
+            if (key === "tags" && Array.isArray(changed.tags) && Array.isArray(original.tags)) {
+              if (changed.tags.length !== original.tags.length) {
+                hasChanges = true;
+              }
+              for (let i = 0; i < changed.tags.length; i++) {
+                if (changed.tags[i] !== original.tags[i]) {
                   hasChanges = true;
-                  // Temporary debugging.
-                  console.log("New Tags Detected:", i);
+                  console.log("Tag difference detected:", i);
                 }
               }
             }
 
+            // Check for keywords field difference
+            if (key === "sdp_article_keywords" && Array.isArray(changed.sdp_article_keywords) && Array.isArray(original.sdp_article_keywords)) {
+              if (changed.sdp_article_keywords.length !== original.sdp_article_keywords.length) {
+                hasChanges = true;
+              }
+              for (let i = 0; i < changed.sdp_article_keywords.length; i++) {
+                if (changed.sdp_article_keywords[i] !== original.sdp_article_keywords[i]) {
+                  hasChanges = true;
+                  console.log("sdp_article_keywords difference detected:", i);
+                }
+              }
+            }
+
+            // Check for category field difference
+            if (key === "taxonomies" && Array.isArray(changed.taxonomies) && Array.isArray(original.taxonomies)) {
+              if (changed.taxonomies.length !== original.taxonomies.length) {
+                hasChanges = true;
+              }
+              for (let i = 0; i < changed.taxonomies.length; i++) {
+                const changedTaxonomy = changed.taxonomies[i];
+                const originalTaxonomy = original.taxonomies[i];
+
+                if (JSON.stringify(changedTaxonomy) !== JSON.stringify(originalTaxonomy)) {
+                  hasChanges = true;
+                  console.log("Taxonomy difference detected:", i);
+                }
+              }
+            }
+
+            // Check for taxonomy field difference
+            if (key === "sdp_article_taxonomy" && Array.isArray(changed.sdp_article_taxonomy) && Array.isArray(original.sdp_article_taxonomy)) {
+              if (changed.sdp_article_taxonomy.length !== original.sdp_article_taxonomy.length) {
+                hasChanges = true;
+              }
+              for (let i = 0; i < changed.sdp_article_taxonomy.length; i++) {
+                const changedTaxonomy = changed.sdp_article_taxonomy[i];
+                const originalTaxonomy = original.sdp_article_taxonomy[i];
+
+                if (JSON.stringify(changedTaxonomy) !== JSON.stringify(originalTaxonomy)) {
+                  hasChanges = true;
+                  console.log("sdp_article_taxonomy difference detected:", i);
+                }
+              }
+            }
+            
             // Construct the full path of the key
             const fullKey = parentKey ? `${parentKey}.${key}` : key;
 
