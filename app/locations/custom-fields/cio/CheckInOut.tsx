@@ -577,11 +577,6 @@ const CheckInOut = () => {
             const changedValue = changed[key];
             const originalValue = original[key];
 
-            // Skip comparison for sdp_kms_link and kms_link
-            if (key === "sdp_kms_link" || key === "kms_link") {
-              console.log("Skipping comparison for key:", key);
-              continue;  // Skip this iteration and move to the next key
-            }
             // for check change in Tags field
             if (key === "tags" && Array.isArray(changed.tags) && Array.isArray(original.tags)) {
               if (changed.tags.length !== original.tags.length) {
@@ -657,7 +652,13 @@ const CheckInOut = () => {
                 originalValue !== undefined &&
                 changedValue !== originalValue
               ) {
-                hasChanges = true;
+                // Skip comparison for sdp_kms_link and kms_link
+                if (key === "sdp_kms_link" || key === "kms_link" || key === "url") {
+                  console.log("Skipping comparison for key:", key);
+                  continue;  // Skip this iteration and move to the next key
+                } else {
+                  hasChanges = true;
+                }
                 // Temporary debugging.
                 console.log("New Value:", originalValue, changedValue, hasChanges);
               }
