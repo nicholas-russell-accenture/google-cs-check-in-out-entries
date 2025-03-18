@@ -577,7 +577,8 @@ const CheckInOut = () => {
             const changedValue = changed[key];
             const originalValue = original[key];
 
-            // // for check change in Tags field
+            
+            // for check change in Tags field
             if (key === "tags" && Array.isArray(changed.tags) && Array.isArray(original.tags)) {
               if (changed.tags.length !== original.tags.length) {
                 hasChanges = true;
@@ -590,7 +591,7 @@ const CheckInOut = () => {
               }
             }
 
-            // // for check change in Keywords field
+            // for check change in Keywords field
             if (key === "sdp_article_keywords" && Array.isArray(changed.sdp_article_keywords) && Array.isArray(original.sdp_article_keywords)) {
               if (changed.sdp_article_keywords.length !== original.sdp_article_keywords.length) {
                 hasChanges = true;
@@ -603,7 +604,7 @@ const CheckInOut = () => {
               }
             }
 
-            // // for check change in Category field
+            // for check change in Category field
             if (key === "taxonomies" && Array.isArray(changed.taxonomies) && Array.isArray(original.taxonomies)) {
               if (changed.taxonomies.length !== original.taxonomies.length) {
                 hasChanges = true;
@@ -619,7 +620,7 @@ const CheckInOut = () => {
               }
             }
 
-            // // for check change in taxonomy field
+            // for check change in taxonomy field
             if (key === "sdp_article_taxonomy" && Array.isArray(changed.sdp_article_taxonomy) && Array.isArray(original.sdp_article_taxonomy)) {
               if (changed.sdp_article_taxonomy.length !== original.sdp_article_taxonomy.length) {
                 hasChanges = true;
@@ -652,9 +653,13 @@ const CheckInOut = () => {
                 originalValue !== undefined &&
                 changedValue !== originalValue
               ) {
-                // Temporary debugging.
-                console.log("New Value:", originalValue, changedValue);
                 hasChanges = true;
+                // check if change in KMS link then entry is not getting locked
+                if (key === "sdp_kms_link" || "kms_link") {
+                  hasChanges = false;
+                }
+                // Temporary debugging.
+                console.log("New Value:", originalValue, changedValue, hasChanges);
               }
             }
           }
