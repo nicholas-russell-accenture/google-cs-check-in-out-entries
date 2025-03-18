@@ -577,7 +577,11 @@ const CheckInOut = () => {
             const changedValue = changed[key];
             const originalValue = original[key];
 
-            
+            // Skip comparison for sdp_kms_link and kms_link
+            if (key === "sdp_kms_link" || key === "kms_link") {
+              console.log("Skipping comparison for key:", key);
+              continue;  // Skip this iteration and move to the next key
+            }
             // for check change in Tags field
             if (key === "tags" && Array.isArray(changed.tags) && Array.isArray(original.tags)) {
               if (changed.tags.length !== original.tags.length) {
@@ -654,10 +658,6 @@ const CheckInOut = () => {
                 changedValue !== originalValue
               ) {
                 hasChanges = true;
-                // check if change in KMS link then entry is not getting locked
-                if (key === "sdp_kms_link" || "kms_link") {
-                  hasChanges = false;
-                }
                 // Temporary debugging.
                 console.log("New Value:", originalValue, changedValue, hasChanges);
               }
