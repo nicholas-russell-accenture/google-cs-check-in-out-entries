@@ -470,11 +470,10 @@ const CheckInOut = () => {
   }, [appSdk, currentUserData]);
 
   const handleChange = async (whatChanged: any) => {
-
-    console.log("On Change:", whatChanged);
      
     // Function to compare original/changed entry and return true if they are different
     function compareObjects(changedObject: any, originalObject: any) {
+      console.log("On Change:", changedObject, originalObject);
       // Do not compare if either object is undefined or null. This may create a false positive.
       if (
         changedObject === undefined ||
@@ -578,8 +577,6 @@ const CheckInOut = () => {
                 } else {
                   hasChanges = true;
                 }
-                // Temporary debugging.
-                console.log("New Value:", originalValue, changedValue, hasChanges);
               }
             }
           }
