@@ -491,7 +491,9 @@ const CheckInOut = () => {
       function compareKeys(changed: any, original: any, parentKey = "") {
         // Loop through the keys in the changed object
         for (const key in changed) {
+          console.log("Key in changed:", key);
           if (changed.hasOwnProperty(key)) {
+            console.log("changed.hasOwnProperty(key)", changed[key], original[key]);
             const changedValue = changed[key];
             const originalValue = original[key];
 
