@@ -470,6 +470,8 @@ const CheckInOut = () => {
   }, [appSdk, currentUserData]);
 
   const handleChange = async (whatChanged: any) => {
+
+    console.log("On Change:", whatChanged);
      
     // Function to compare original/changed entry and return true if they are different
     function compareObjects(changedObject: any, originalObject: any) {
